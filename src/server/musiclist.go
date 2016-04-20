@@ -16,6 +16,7 @@ const (
 )
 
 type MusicList struct {
+	name string
 	orderList map[int]string // Key: Position, Value: FileName
 	fileList map[string]bool // Key: FileName value: Position
 	numFiles int
@@ -31,6 +32,7 @@ func checkFileExist(fileName string) bool{
 }
 
 func (this *MusicList) NewInstance(){
+	//this.
 	this.lock = new(sync.Mutex)
 	this.orderList = make(map[int]string)
 	this.fileList = make(map[string]bool)
