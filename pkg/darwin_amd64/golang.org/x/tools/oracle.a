@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     27894     `
-go object darwin amd64 go1.6 X:none
-build id "9301077d5825a672b3c6ce99b040ce1ec17ccdad"
+__.PKGDEF       0           0     0     644     27896     `
+go object darwin amd64 go1.6.1 X:none
+build id "6131ece832d65124c912dc2f7211054bf60a5247"
 
 $$
 package oracle
@@ -215,8 +215,8 @@ package oracle
 	func (@"sync".r·1 *@"sync".rlocker) Unlock ()
 
 $$
-_go_.o          0           0     0     644     1016332   `
-go object darwin amd64 go1.6 X:none
+_go_.o          0           0     0     644     1016334   `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ld

@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     16210     `
-go object darwin amd64 go1.6 X:none
-build id "144c9b4ae0fa9f22ccde232759bdaeed747ceadb"
+__.PKGDEF       0           0     0     644     16212     `
+go object darwin amd64 go1.6.1 X:none
+build id "63afb3cb154d361c7b17b5098436cf2e0423baa2"
 
 $$
 package importgraph
@@ -127,8 +127,8 @@ package importgraph
 	var @"time".UTC *@"time".Location
 
 $$
-_go_.o          0           0     0     644     77917     `
-go object darwin amd64 go1.6 X:none
+_go_.o          0           0     0     644     77919     `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ldgo/build.async.aBgolang.org/x/tools/go/buildutil.a ş "".Graph.addEdge  €  €eH‹%    H;a†  Hƒì`H‹L$pH‹D$xH    H‰$H‹\$hH‰\$H‰L$PH‰L$H‰D$XH‰D$è    H‹\$ H‹1íH9è…   H    H‰$HÇD$    HÇD$    HÇD$    è    H‹D$ H‹\$pH‰\$@H‹\$xH‰\$HH‰D$0H‰D$8H    H‰$H‹\$hH‰\$H\$@H‰\$H\$8H‰\$è    H‹D$0H‹œ$€   H‰\$@H‹œ$ˆ   H‰\$HÆD$/H    H‰$H‰D$H\$@H‰\$H\$/H‰\$è    HƒÄ`Ãè    éÆşÿÿÌÌÌÌÌÌ

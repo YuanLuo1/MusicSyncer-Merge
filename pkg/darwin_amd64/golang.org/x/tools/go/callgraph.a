@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     79898     `
-go object darwin amd64 go1.6 X:none
-build id "8b82cafdae57cf90ae65f0bc16e27e491531c9d1"
+__.PKGDEF       0           0     0     644     79900     `
+go object darwin amd64 go1.6.1 X:none
+build id "3d01e7df6b6500c9b5a31119c98361551278ff57"
 
 $$
 package callgraph
@@ -463,8 +463,8 @@ package callgraph
 	var @"go/types".Typ []*@"go/types".Basic
 
 $$
-_go_.o          0           0     0     644     109083    `
-go object darwin amd64 go1.6 X:none
+_go_.o          0           0     0     644     109085    `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ld

@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     11513     `
-go object darwin amd64 go1.6 X:none
-build id "b0e2d31cfec1208f1fdbbe2ed6b8266c6bc8b5e2"
+__.PKGDEF       0           0     0     644     11515     `
+go object darwin amd64 go1.6.1 X:none
+build id "28398c8b74fad7ae7f126f5db2f91b03c21f6ea2"
 
 $$
 package astutil
@@ -113,8 +113,8 @@ package astutil
 	func (@"sync".r·1 *@"sync".rlocker) Unlock ()
 
 $$
- _go_.o          0           0     0     644     193665    `
-go object darwin amd64 go1.6 X:none
+ _go_.o          0           0     0     644     193667    `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ld

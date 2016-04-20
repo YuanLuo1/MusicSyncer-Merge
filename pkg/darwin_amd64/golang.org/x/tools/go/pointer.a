@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     111057    `
-go object darwin amd64 go1.6 X:none
-build id "6447bc7b284b97eaae52c9fd42ea2407ddfbd92e"
+__.PKGDEF       0           0     0     644     111059    `
+go object darwin amd64 go1.6.1 X:none
+build id "bd0b922a5f746638432f43c962c8cf09db19f357"
 
 $$
 package pointer
@@ -649,8 +649,8 @@ package pointer
 	const @"".otTagged = 0x1
 
 $$
- _go_.o          0           0     0     644     1741760   `
-go object darwin amd64 go1.6 X:none
+ _go_.o          0           0     0     644     1741762   `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ld

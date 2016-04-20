@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     113176    `
-go object darwin amd64 go1.6 X:none
-build id "c68e9a8957f9c8ceb34df0e63fae7766386ef7b2"
+__.PKGDEF       0           0     0     644     113178    `
+go object darwin amd64 go1.6.1 X:none
+build id "4ce4e440eb02622c32b3f89496dfe07183f076cc"
 
 $$
 package ssautil
@@ -654,8 +654,8 @@ package ssautil
 	var @"go/types".Typ []*@"go/types".Basic
 
 $$
-_go_.o          0           0     0     644     203826    `
-go object darwin amd64 go1.6 X:none
+_go_.o          0           0     0     644     203828    `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ldgo/ast.ago/token.ago/types.a<golang.org/x/tools/go/loader.a6golang.org/x/tools/go/ssa.abytes.a

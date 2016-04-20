@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     80951     `
-go object darwin amd64 go1.6 X:none
-build id "0b7b7eef21ab8633f177f23c5df41c4bf47c078a"
+__.PKGDEF       0           0     0     644     80953     `
+go object darwin amd64 go1.6.1 X:none
+build id "f074a8e5cfe261d3ce55c0f1cd5f9fbbb34b0a19"
 
 $$
 package loader
@@ -572,8 +572,8 @@ package loader
 	func @"go/token".NewFileSet () (? *@"go/token".FileSet) { return (&@"go/token".FileSet{ @"go/token".base:int(0x1) }) }
 
 $$
- _go_.o          0           0     0     644     428518    `
-go object darwin amd64 go1.6 X:none
+ _go_.o          0           0     0     644     428520    `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ld

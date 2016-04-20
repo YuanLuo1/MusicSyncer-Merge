@@ -32,7 +32,6 @@ func checkFileExist(fileName string) bool{
 }
 
 func (this *MusicList) NewInstance(){
-	//this.
 	this.lock = new(sync.Mutex)
 	this.orderList = make(map[int]string)
 	this.fileList = make(map[string]bool)

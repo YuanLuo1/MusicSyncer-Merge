@@ -1,7 +1,7 @@
 !<arch>
-__.PKGDEF       0           0     0     644     14793     `
-go object darwin amd64 go1.6 X:none
-build id "b092e83ca17f1a3b5a7df0b09393d274a469d452"
+__.PKGDEF       0           0     0     644     14795     `
+go object darwin amd64 go1.6.1 X:none
+build id "3fd9dda97059015711f0db74de8a3025574a94d6"
 
 $$
 package typeutil
@@ -130,8 +130,8 @@ package typeutil
 	func (@"go/types".s·2 *@"go/types".Signature "esc:0x1") Variadic () (? bool) { return @"go/types".s·2.@"go/types".variadic }
 
 $$
- _go_.o          0           0     0     644     152321    `
-go object darwin amd64 go1.6 X:none
+ _go_.o          0           0     0     644     152323    `
+go object darwin amd64 go1.6.1 X:none
 
 !
   go13ldgo/types.abytes.a
