@@ -1,2 +1,8 @@
+<<<<<<< HEAD
 pkg/*
 bin/*
+=======
+test.go
+.DS_Store
+
+>>>>>>> 7e903e86953c74a3969cc9e37d17724b64c456bd
