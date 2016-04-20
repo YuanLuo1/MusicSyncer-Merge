@@ -8,6 +8,7 @@ import (
  	"bufio"
 	"strings"
 	"io"
+	"math"
 	"math/rand"
 )
 
@@ -18,6 +19,7 @@ const (
 type MusicList struct {
 	orderList map[int]string // Key: Position, Value: FileName
 	fileList map[string]bool // Key: FileName value: Position
+	hosts []string
 	numFiles int
 	lock *sync.Mutex
 }
@@ -37,24 +39,55 @@ func (this *MusicList) NewInstance(){
 	this.numFiles = 0
 }
 
+func hashCode(fileName string) int{
+	result := 0
+	for i, r := range fileName {
+		result += i * int(r)
+	}
+	return result
+}
+
+func (this *MusicList) selectServer(fileName string) []Server{
+	/* Global value for servers in server.go */ 
+	hcode = hashCode(fileName) % len(servers)
+	numServers := int(math.Sqrt(float64(hcode)))
+	fservers = make([]Server, numServers)
+	i := 0
+	for {
+		if i == numServers {
+			break
+		}
+		fservers[i++] = servers[hcode++]
+		if hcode == len(servers){
+			hcode = 0
+		}
+	}
+}
+
 func (this *MusicList) Add(fileName string, hosts []string){
 	this.lock.Lock()
 	this.orderList[this.numFiles] = fileName
 	this.fileList[fileName] = true
 	this.numFiles++
+
+	// TODO: reach agreement among group servers (hosts)
+
 	// if file exists, don't need to request file from other servers
 	if checkFileExist(fileName){
 		return
 	}
-	// shuffle the hosts 
-	dest := make([]string, len(hosts))
-	perm := rand.Perm(len(hosts))
+	// shuffle the hosts
+	fservers = selectServer(fileName)
+	dest := make([]string, len(fservers))
+	perm := rand.Perm(len(fservers))
+	// dest := make([]string, len(hosts))
+	// perm := rand.Perm(len(hosts))
 	for i, v := range perm {
-		dest[v] = hosts[i]
+		dest[v] = fservers[i]
 	}
 	// Request file from other servers
 	for _, addr := range dest{
-		if this.request(fileName, addr){
+		if this.request(fileName, addr.ip + ":" + addr.comm_port){
 			fmt.Println("music List: ", this.orderList)
 			this.lock.Unlock()
 			return
