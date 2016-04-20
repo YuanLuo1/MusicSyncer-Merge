@@ -34,6 +34,7 @@ func checkFileExist(fileName string) bool{
 }
 
 func (this *MusicList) NewInstance(){
+	this.name = ""
 	this.lock = new(sync.Mutex)
 	this.orderList = make(map[int]string)
 	this.fileList = make(map[string]bool)
@@ -50,19 +51,22 @@ func hashCode(fileName string) int{
 
 func (this *MusicList) selectServer(fileName string) []Server{
 	/* Global value for servers in server.go */ 
-	hcode = hashCode(fileName) % len(servers)
+	hcode := hashCode(fileName) % len(servers)
 	numServers := int(math.Sqrt(float64(hcode)))
-	fservers = make([]Server, numServers)
+	fservers := make([]Server, numServers)
 	i := 0
 	for {
 		if i == numServers {
 			break
 		}
-		fservers[i++] = servers[hcode++]
+		fservers[i] = servers[hcode]
+		i += 1
+		hcode += 1
 		if hcode == len(servers){
 			hcode = 0
 		}
 	}
+	return fservers
 }
 
 func (this *MusicList) Add(fileName string, hosts []string){
@@ -78,8 +82,8 @@ func (this *MusicList) Add(fileName string, hosts []string){
 		return
 	}
 	// shuffle the hosts
-	fservers = selectServer(fileName)
-	dest := make([]string, len(fservers))
+	fservers := this.selectServer(fileName)
+	dest := make([]Server, len(fservers))
 	perm := rand.Perm(len(fservers))
 	// dest := make([]string, len(hosts))
 	// perm := rand.Perm(len(hosts))
