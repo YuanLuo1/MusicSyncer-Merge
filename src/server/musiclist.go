@@ -20,7 +20,6 @@ type MusicList struct {
 	name string
 	orderList map[int]string // Key: Position, Value: FileName
 	fileList map[string]bool // Key: FileName value: Position
-	hosts []string
 	numFiles int
 	lock *sync.Mutex
 }
@@ -69,6 +68,11 @@ func (this *MusicList) selectServer(fileName string) []Server{
 	return fservers
 }
 
+func (this *MusicList) add(fileName string) {
+	this.fileList[fileName] = true
+	this.numFiles++
+}
+
 func (this *MusicList) Add(fileName string, hosts []string){
 	this.lock.Lock()
 	this.orderList[this.numFiles] = fileName
@@ -92,7 +96,7 @@ func (this *MusicList) Add(fileName string, hosts []string){
 	}
 	// Request file from other servers
 	for _, addr := range dest{
-		if this.request(fileName, addr.ip + ":" + addr.comm_port){
+		if this.request(fileName, addr.combineAddr("comm")){
 			fmt.Println("music List: ", this.orderList)
 			this.lock.Unlock()
 			return
@@ -160,6 +164,17 @@ func (this *MusicList) request(fileName string, addr string) bool{
 	fmt.Printf("Finished transferring file. Received: %d \n", receivedBytes)
 	return true
 }
+
+func getMusicList(groupName string) MusicList{
+	var list MusicList
+	for i:= range musicList {
+		if musicList[i].name == groupName {
+			list = musicList[i]
+		}
+	}
+	return list
+}
+
 
 /*func main(){
 	mList := new(MusicList)

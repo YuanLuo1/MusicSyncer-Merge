@@ -1,59 +1,52 @@
 package main
 import(
-	"strings"
-	"fmt"
+	//"strings"
+	//"fmt"
 )
-type Group struct{
+/*type Group struct{
 	name string
 	serverList map[string]bool	
 }
 
-func (this Group) addServer(ip string) {
-	this.serverList[ip] = true
+func (g Group) addServer(ip string) {
+	g.serverList[ip] = true
 }
 
-func (this Group) delServer(ip string) {
-	delete(this.serverList, ip)
-}
-
-
-func (this Group) setName(name string) {
-	this.name = name
+func (g Group) delServer(ip string) {
+	delete(g.serverList, ip)
 }
 
 
-type GroupMusic struct{
-	name string
-	musicList []string
-	//music MusicList
+func (g Group) setName(name string) {
+	g.name = name
 }
 
-func (this GroupMusic) addMusic(music string) {
-	this.musicList = append(this.musicList, music)
-}
-
-func (this GroupMusic) delMusic(music string) {
-	for i:= range this.musicList {
-		if this.musicList[i] == music {
-			//f.musicList = append(f.musicList[:i], f.musicList[i+1:])
-		}
+func (g Group) getServerList() []string{
+	keys := make([]string, 0, len(g.serverList))
+	for k:= range g.serverList{
+		keys = append(keys, k)
 	}
-}
+	return keys
+}*/
 
 func isGroupNameExist(groupName string) bool{
-	for i := range groups {
-		if strings.Compare(groups[i].name, groupName) == 0 {
-			fmt.Println("debug")
-			return true
-		}
+	if _,ok := groupMap[groupName]; ok {
+		return true
 	}
 	return false
 }
 
 func isGroupHere(groupName string) bool {
-	if hasGroups[groupName]{
+	if _, ok := hasGroups[groupName]; ok{
 		return true
-	} else {
-		return false
 	}
+	return false
+}
+
+func getServerListByGroupname(groupName string) []string {
+	return clusterMap[groupMap[groupName]]
+}
+
+func getServerListByClustername(clusterName string) []string {
+	return clusterMap[clusterName]
 }
