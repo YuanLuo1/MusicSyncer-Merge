@@ -128,8 +128,10 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) {
 	case "uploadFile":
 		*reply = "success"
 	case "ackRcv":
-		// Master will rcv this type of msg if slave recv a file and send ack back
-		this.ackChans <- "ack"
+		// Master will rcv this type of msg if slave recv a file and send back an ack
+		this.rcvMedia.ackChans[msg.ListInfo.ListName] <- "ack"
+	case "commit":
+		this.ackChans[msg.ListInfo.ListName] <- "ack"
 	default:
 		fmt.Println("Message type not correct: ", msg.Type)
 		*reply = ""
@@ -139,8 +141,7 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) {
 /* Multicast a update List message to inform update to all the members,
 	Only master can use this function */
 func (this *Mulitcaster) UpdateList(content ListConent) bool {
-	msg := {"", this.myInfo.ip+":"+this.myInfo.comm_port, "listMsg", memberName, content, ElectionMsg{}}
-	result := true
+	msg := Message{"", this.myInfo.ip+":"+this.myInfo.comm_port, "listMsg", "", content, ElectionMsg{}}
 
 	// New list, Create new channel to rcv messages
 	if msg.ListInfo.Type == "create" {
@@ -156,10 +157,37 @@ func (this *Mulitcaster) UpdateList(content ListConent) bool {
 		msg.Dest = this.members[key]
 		go this.SendMsg(msg)
 	}
-	// TODO: Implement the ack here, If rcv majority votes from clients, commit the log to client, else discard msg
-	
 
-	return result
+	// Request message from 
+	numVote := int(len(this.members)/2)
+	numRcv := 0
+	for i:=0; i<numVote-1; i++ {
+		select {
+			case <- this.ackChans[content.ListName]:
+				numRcv += 1
+				fmt.Println("rcv Ack ", numRcv)
+			case <- time.After(time.Second * 0.6):
+				fmt.Println("Not enough vote :(")
+				if content.Type == "create" {
+					delete(this.msgChans, msg.ListInfo.ListName)
+					delete(this.ackChans, msg.ListInfo.ListName)
+					delete(this.sender.ackChans, msg.ListInfo.ListName)
+				}
+				return false
+		}
+	}
+	// Rcv a majority of votes, multicast commit message to those slaves
+	msg.Type = "commit"
+	for key := range this.members {
+		if key == this.myInfo.name {
+			continue
+		}
+		msg.Dest = this.members[key]
+		go this.SendMsg(msg)
+	}
+	// Delivers to itself
+	this.msgChans[content.ListName] <- msg.ListInfo
+	return true
 }
 
 func (this *Mulitcaster) GetElecChan() chan ElectionMsg {

@@ -14,6 +14,7 @@ import (
 
 type Server struct {
     ip string
+	name string
     comm_port string
     http_port string
     heartbeat_port string
