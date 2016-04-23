@@ -232,9 +232,9 @@ func (this *Mulitcaster) RemoveMemberGlobal(memberName string) bool{
 }
 
 /* send  election message, ask group memeber to vote for me */
-func (this *Mulitcaster) SendElectionMsg() bool{
+func (this *Mulitcaster) SendElectionMsg(oldMaster string) bool{
 	for key := range this.members{
-		if key == this.myInfo.name {
+		if key == this.myInfo.name || key == oldMaster{
 			continue
 		}
 		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"candidate", this.myInfo.name}}
