@@ -1,15 +1,18 @@
-<!--Author: W3layouts
-Author URL: http://w3layouts.com
-License: Creative Commons Attribution 3.0 Unported
-License URL: http://creativecommons.org/licenses/by/3.0/
--->
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
-<head>
-<title>Your Group</title>
+    <head>
+        <title>jQuery UI sortable()实现拖动排序</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="http://tool.phpddt.com/resources/js/jquery-1.7.2.min.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+        <title>Your Group</title>
 <link href="css/bootstrap.css" rel="stylesheet" type="text/css" media="all">
+<link  href="css/style.css" media="screen" type="text/css" />
+<link rel="stylesheet" href="css/reset.css">
+
+<link rel="stylesheet" href="css/style.css" media="screen" type="text/css" />
 <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="js/jquery-1.11.0.min.js"></script>
+<!-- <script src="js/jquery-1.11.0.min.js"></script> -->
 <!-- Custom Theme files -->
 <link href="css/style.css" rel="stylesheet" type="text/css" media="all"/>
 <!-- Custom Theme files -->
@@ -17,106 +20,174 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="keywords" content="DS-team12" />
 <script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false); function hideURLbar(){ window.scrollTo(0,1); } </script>
+<!--<script src="js/jquery-1.7.2.min.js"></script>
+<script src="js/jquery-ui.js"></script>-->
+<script src="http://tool.phpddt.com/resources/js/jquery-1.7.2.min.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
 <!--Google Fonts-->
 <!-- start-smoth-scrolling -->
 <script type="text/javascript" src="js/move-top.js"></script>
 <script type="text/javascript" src="js/easing.js"></script>
-	<script type="text/javascript">
-			jQuery(document).ready(function($) {
-				$(".scroll").click(function(event){		
-					event.preventDefault();
-					$('html,body').animate({scrollTop:$(this.hash).offset().top},1000);
-				});
-			});
-	</script>
-<!-- //end-smoth-scrolling -->
+<!-- <script src="js/jquery.min.js"></script> -->
+<script src="js/jquery.jplayer.min.js"></script>
+<script src="js/jplayer.playlist.min.js"></script>
 <script src="js/menu_jquery.js"></script>
-</head>
-<body>
-<!--header start here-->
-<div class="header1">
-	<div class="container">
-		 <div class="header-main">
-				<!---->
-					<div class="header-logo">
-						<div class="logo">
-						<a href="index.html"><img src="images/lo1.jpg" alt="" ></a>
-						</div>
-						<div class="top-nav">
-							<span class="icon"><img src="images/menu.png" alt=""> </span>
-							<ul>
-								<li ><a href="index.html">Home</a> </li>
-								<li ><a href="about.html" >About  </a> </li>
-								<li><a href="join.html" >Group</a></li>
-								<li><a href="contact.html" >Contact </a></li>
-							</ul>
-							<!--script-->
-						<script>
-							$("span.icon").click(function(){
-								$(".top-nav ul").slideToggle(500, function(){
-								});
-							});
-					</script>				
-				</div>
-				<div class="clearfix"> </div>
-					</div>
-			<!---->
-			<div class="top-menu">					
-					<ul>
-						<li ><a href="index.html" >Home</a> </li>
-						<li ><a href="about.html">About  </a> </li>
-						<li><a href="index.html"> <img src="images/lo1.jpg" alt=""> </a></li>
-						<li><a href="join.html"> Group </a> </li>
-						<li><a href="contact.html">Contact</a></li>
-					</ul>
-				</div>
-					<!--script-->
-	 </div>
+<script src="js/index.js"></script>
+    </head>
+    <body>
+       <script>
+       jQuery(document).ready(function($) {
+        $(".scroll").click(function(event){   
+          event.preventDefault();
+          $('html,body').animate({scrollTop:$(this.hash).offset().top},1000);
+        });
+      });
+
+        $(function() {
+          $( ".sortable" ).sortable({
+          cursor: "move",
+          items :"li",                        //只是li可以拖动
+          opacity: 0.6,                       //拖动时，透明度为0.6
+          revert: true,                       //释放时，增加动画
+          update : function(event, ui){       //更新排序之后
+//alert($(this).sortable("toArray"));
+          }
+         });
+       });
+      </script>
+      
+
+      <div class="header1">
+  <div class="container">
+     <div class="header-main">
+        <!---->
+          <div class="header-logo">
+            <div class="logo">
+            <a href="index.html"><img src="images/lo1.jpg" alt="" ></a>
+            </div>
+            <div class="top-nav">
+              <span class="icon"><img src="images/menu.png" alt=""> </span>
+              <ul>
+                <li ><a href="index.html">Home</a> </li>
+                <li ><a href="about.html" >About  </a> </li>
+                <li><a href="join.html" >Group</a></li>
+                <li><a href="contact.html" >Contact </a></li>
+              </ul>
+              <!--script-->
+            <script>
+              $("span.icon").click(function(){
+                $(".top-nav ul").slideToggle(500, function(){
+                });
+              });
+          </script>       
+        </div>
+        <div class="clearfix"> </div>
+          </div>
+      <!---->
+      <div class="top-menu">          
+          <ul>
+            <li ><a href="index.html" >Home</a> </li>
+            <li ><a href="about.html">About  </a> </li>
+            <li><a href="index.html"> <img src="images/lo1.jpg" alt=""> </a></li>
+            <li><a href="join.html"> Group </a> </li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </div>
+          <!--script-->
+   </div>
    </div>
 </div>
 <!--header end here-->
 <!--single start here-->
-		 <div class="single">
-			<div class="container">
-				<div class="col-md-8 ">
-					<div class=" single-grid">
-						<img class="img-responsive" src="images/4.jpg" alt=""  class="img-responsive">
-					</div>
+     <div class="single">
+      <div class="container">
+        <div class="col-md-8 ">
+          <div class=" single-grid">
+                    
+            <div class="music-player">
+  <!--<div style="background-image: url(http://i.imgur.com/yqB0erk.jpg);" class="album"></div>-->
 
-					<div class="single-bottom">
-					<h3>Add a Music</h3>
-						<form enctype="multipart/form-data" action="http://127.0.0.1:8282/upload.html" method="post">
-							<div class="col-md-6 comment">
-							<input type="file" name="uploadfile" />
-      						<input type="hidden" name="token" value="{{.}}"/>
- 							</div>
-							
-							<div class="contact-form">
-								<input type="submit" value="Add">
-							</div>	
-						</form>			
-					</div>
-				</div>
-			
+  <div class="info">
+    <div class="left">
+      <a href="javascript:;" class="icon-shuffle"></a>
+      <a href="javascript:;" class="icon-heart"></a>
+    </div>
+    <div class="center">
+    <div class="jp-playlist">
+      <ul>
+        <li></li>
+      </ul>
+    </div>
 
-				<div class="col-md-3 categories-grid">
-					<div class="grid-categories">
-					<h4>Music List</h4>
-					<ul class="popular ">
-						<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music A</a></li>
-						<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music B</a></li>
-						<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music C</a></li>
-						<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music D</a></li>
-						<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
-					</ul>
-					</div>
-				</div>
+    </div>
+    <div class="right">
+      <a href="javascript:;" class="icon-repeat"></a>
+      <a href="javascript:;" class="icon-share"></a>
+    </div>
 
-			</div>
-		</div>
+    <div class="progress jp-seek-bar">
+      <span class="jp-play-bar" style="width: 0%"></span>
+    </div>
+  </div>
 
+  <div class="controls">
+    <div class="current jp-current-time">00:00</div>
+    <div class="play-controls">
+      <a href="javascript:;" class="icon-previous jp-previous" title="previous"></a>
+      <a href="javascript:;" class="icon-play jp-play" title="play"></a>
+      <a href="javascript:;" class="icon-pause jp-pause" title="pause"></a>
+      <a href="javascript:;" class="icon-next jp-next" title="next"></a>
+    </div>
+    <div class="volume-level jp-volume-bar">
+      <span class="jp-volume-bar-value" style="width: 0%"></span>
+      <a href="javascript:;" class="icon-volume-up jp-volume-max" title="max volume"></a>
+      <a href="javascript:;" class="icon-volume-down jp-mute" title="mute"></a>
+    </div>
+  </div>
 
-		
-<!--//single end here-->
-</body>
+  <div id="jquery_jplayer" class="jp-jplayer"></div>
+
+</div>
+          </div>
+
+          <div class="single-bottom">
+          <h3>Add a Music</h3>
+            <form enctype="multipart/form-data" action="http://127.0.0.1:8282/upload.html" method="post">
+              <div class="col-md-6 comment">
+              <input type="file" name="uploadfile" />
+                  <input type="hidden" name="token" value="{{.}}"/>
+              </div>
+              
+              <div class="contact-form">
+                <input type="submit" value="Add">
+              </div>  
+            </form>     
+          </div>
+        </div>
+      
+
+        <div class="col-md-3 categories-grid">
+          <div class="grid-categories">
+          <h4>Music List</h4>
+          <ul class="popular sortable  " style="position:absolute; height:270px; width:100%; overflow:auto">
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music A</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music B</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music C</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music D</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+            <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>
+          </ul>
+          </div>
+          </div>
+          </div>
+    </div>
+    </body>
 </html>
