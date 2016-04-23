@@ -13,7 +13,7 @@ import (
  */
 
 type ElectionMsg struct{
-	// Vote, Already vote or candidate
+	// Vote, Already vote or candidate, announce
 	Type string
 	NewMaster string
 }
@@ -244,4 +244,15 @@ func (this *Mulitcaster) SendElectionMsg(oldMaster string) bool{
 		}
 	}
 	return true
+}
+
+/* send announce message to told everyone I'm the new master */
+func (this *Mulitcaster) SendNewMasterMsg() {
+	for key := range this.members {
+		if key == this.myInfo.name {
+			continue
+		}
+		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"announce", this.myInfo.name}}
+		go this.SendMsg(msg)
+	}
 }
