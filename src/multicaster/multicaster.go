@@ -6,6 +6,7 @@ import (
 	"time"
 	"log"
 	"net/rpc"
+	"sync"
 )
 
 /*
@@ -47,6 +48,11 @@ type Mulitcaster struct {
 	ackChans map[string]chan string 	// Key: MusicList name, value: Ack messages
 	elecChan chan ElectionMsg
 	sender RPCRecver
+	/* election */
+	voted bool		// Set true if already vote for a candidate
+	numVotes int 	// Number of vote recieved
+	masterChan chan string 	// New master channel
+	electionLock *sync.Mutex
 }
 
 /*
@@ -62,9 +68,14 @@ func (this *Mulitcaster) Initiallized(server Server, members []Server){
 	this.myInfo = server
 	this.sender = RPCRecver{this, make(map[string]chan string)}
 
+	this.voted = false
+	this.numVotes = 0
+	this.masterChan = make(chan string)
+
 	this.ackChans = make(map[string]chan string)
 	this.msgChans = make(map[string]chan Message)
 	this.elecChan = make(chan ElectionMsg, 128)
+	this.electionLock = new(sync.Mutex)
 	go this.lisenter(server)
 }
 
@@ -231,23 +242,29 @@ func (this *Mulitcaster) RemoveMemberGlobal(memberName string) bool{
 	return true
 }
 
-/* send  election message, ask group memeber to vote for me */
+/* send election message, ask group memeber to vote for me */
 func (this *Mulitcaster) SendElectionMsg(oldMaster string) bool{
+	this.electionLock.Lock()
+	if this.voted == true {
+		fmt.Println("I've already voted, cannot be a candidate :(")
+		this.electionLock.Unlock()
+		return false 
+	}
+	this.voted = true
 	for key := range this.members{
 		if key == this.myInfo.name || key == oldMaster{
 			continue
 		}
 		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"candidate", this.myInfo.name}}
-		if this.SendMsg(msg) != "success" {
-			fmt.Println("Error Asking client to vote for me: ", key)
-			return false
-		}
+		go this.SendMsg(msg)
 	}
+	this.electionLock.Unlock()
 	return true
 }
 
 /* send announce message to told everyone I'm the new master */
 func (this *Mulitcaster) SendNewMasterMsg() {
+	this.electionLock.Lock()
 	for key := range this.members {
 		if key == this.myInfo.name {
 			continue
@@ -255,4 +272,19 @@ func (this *Mulitcaster) SendNewMasterMsg() {
 		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"announce", this.myInfo.name}}
 		go this.SendMsg(msg)
 	}
+	this.electionLock.Unlock()
+}
+
+/* send election message, I will vote or not vote for you */
+func (this *Mulitcaster) SendVoteMessage(msg ElectionMsg) {
+	this.electionLock.Lock()
+	if this.voted == true {
+		msg := Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"vote", msg.NewMaster}}
+	}
+	else {
+		msg := Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"novote", msg.NewMaster}}
+		this.voted = true
+	}
+	go this.SendMsg(msg)
+	this.electionLock.Unlock()
 }
