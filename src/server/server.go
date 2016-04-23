@@ -24,6 +24,9 @@ var (
     clusterMap map[string][]string //key:cluster name, value:cluster's server list
     groupMap map[string]string //key: groupName, value: cluster name
 )
+type Content struct{
+	Test string
+}
 
 type Server struct {
     ip string
@@ -54,14 +57,9 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
     	groupName := strings.TrimSpace(r.PostFormValue("groupname"))
     	//fmt.Printf("create group debug")
     	if !isGroupNameExist(groupName) { 
-    		groupMap[groupName] = myServer.cluster 
-    		hasGroups[groupName] = true
-    		//TODO: have to tell all the servers - new group created
-    		//MSG other servers in the cluster 
+    		createNewGroup(groupName)
     		multicastServers(groupName, "create_group")
-    		
-			fmt.Println("[Create] Group Map", groupMap)
-			fmt.Println("[Create] Has Groups", hasGroups)
+			
 			http.Redirect(w, r, "/upload.html", http.StatusFound)
     	} else {
     		w.Write([]byte("group name exist, please try another"))
@@ -70,6 +68,19 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
     	fmt.Fprintf(w, "Error Method")
     }
     
+}
+func createNewGroup(groupName string) {
+	groupMap[groupName] = myServer.cluster 
+    hasGroups[groupName] = true
+    
+    newList := new(MusicList)
+    newList.NewInstance()
+    newList.name = groupName
+    musicList = append(musicList, *newList)
+    fmt.Println("[Create] Group Map", groupMap)
+	fmt.Println("[Create] Has Groups", hasGroups)
+    //TODO: have to tell all the servers - new group created
+    //MSG other servers in the cluster
 }
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +127,7 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
         f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
         //getGroup(groupName).getServerList()
         list := getMusicList(groupName)
-        list.Add(handler.Filename, clusterMap[groupMap[groupName]])
+        list.Add(handler.Filename, getServerListByClustername(myServer.cluster))
        /* for i := range localGroups {
         	if localGroups[i].name == groupName {
         		localGroups[i].addMusic(handler.Filename)
@@ -141,8 +152,9 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		c := Content{Test: "test!!!!!"}
     	t, _ := template.ParseFiles("UI/index.html")
-    	t.Execute(w, nil)
+    	t.Execute(w, c)
     } else {
     	fmt.Fprintf(w, "Error Method")
     }

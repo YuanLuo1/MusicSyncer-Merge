@@ -9,6 +9,7 @@ import (
 
 func readMusicConfig(){
 	file, err:= os.Open("./initMusic.csv")
+	musicList = make([]MusicList,100)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
@@ -31,8 +32,10 @@ func readMusicConfig(){
 			mList := new(MusicList)
 			mList.NewInstance()
 			mList.name = groupName
-			mList.add(musicFile)
+			mList.add(musicFile) //problems here
+			musicList = append(musicList, *mList)
 		}
+		
 		
     }
 }
@@ -89,7 +92,7 @@ func readServerConfig(){
 			fmt.Println("[init] Error: ", err)
 			return
 		}
-		newServer :=  Server{record[1], record[2], record[3], record[4], record[5]} //ip, comm, http, heartbeat, cluster
+		newServer :=  Server{record[1], record[0],record[2], record[3], record[4], record[5]} //ip, comm, http, heartbeat, cluster
 		servers = append(servers, newServer) 
 		
 		clusterMap[record[5]] = append(clusterMap[record[5]], newServer.combineAddr("comm"))

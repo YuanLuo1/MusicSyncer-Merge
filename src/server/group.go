@@ -43,10 +43,17 @@ func isGroupHere(groupName string) bool {
 	return false
 }
 
-func getServerListByGroupname(groupName string) []string {
+/*func getServerListByGroupname(groupName string) []string {
 	return clusterMap[groupMap[groupName]]
-}
+}*/
 
 func getServerListByClustername(clusterName string) []string {
-	return clusterMap[clusterName]
+	newList := clusterMap[clusterName]
+	list := make([]string, len(newList)-1)
+	for i:= range newList {
+		if newList[i] != myServer.combineAddr("comm"){
+			list = append(list, newList[i])
+		}
+	}
+	return list
 }
