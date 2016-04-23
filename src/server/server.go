@@ -22,6 +22,10 @@ var (
     hasGroups map[string]bool //local groups map
     clusterMap map[string][]string //key:cluster name, value:cluster's server list
     groupMap map[string]string //key: groupName, value: cluster name
+
+    /* New */
+    master Server
+    multicaster Mulitcaster
 )
 
 type Content struct{
@@ -169,6 +173,80 @@ func getDeadServer(){
     for {
 		dead := <-deadServerChannel
 		fmt.Println("[Heart Beat] dead: ", dead)
+        // If I'm the master, then I must detect some slave died
+        // Told every slaves to update their server list
+        if master == myServer {
+            memToRemove := myServer
+            for i:= range servers {
+                if servers[i].combineAddr("heartbeat") == dead {
+                    memToRemove = servers[i]
+                    break
+                }
+            }
+            if master == memToRemove {
+                fmt.Println("Can not found dead server within the list", dead)
+            }
+            multicaster.RemoveMemberGlobal(memToRemove.combineAddr("comm"))
+        }
+        // If I'm the client which detects the master is dead
+        // Become a candidate and raise election
+        else {
+            // raise an election
+            isCandidate := mutlicaster.SendElectionMsg(master.combineAddr("comm"))
+            // Wait for others to vote for you
+            select {
+                case newMaster := <-multicaster.masterChan:
+                    UpdateMaster(newMaster)
+                case <- time.After(time.Second * 0.5):
+                    fmt.Println("time out in getting a new master")
+            }
+        }   
+
+    }
+}
+
+// TODO: update the list in heartbeat and server.go
+func UpdateMaster(new_master string) {
+    multicaster.numVotes = 0
+    multicaster.voted = false
+    if myServer.name == new_master {
+        master = myServer
+        // TODO
+        heartbeat.updateAliveList()
+    }
+    else {
+        for i := range servers {
+            if servers[i].name = new_master {
+                master = servers[i]
+                break
+            }
+        }
+        // TODO
+        heartbeat.updateAliveList()
+    }
+}
+
+func GetElecMsg() {
+    elecChannel := mutlicaster.elecChan
+    for {
+    eMsg := <-this.elecChan        
+    switch eMsg.Type {
+            case "candidate":
+                go this.SendVoteMessage(eMsg)
+            case "announce":
+                UpdateMaster(eMsg.NewMaster)
+                fmt.Println("Somebody else is the new master!")
+            case "vote":
+                multicaster.numVotes += 1
+                if multicaster.numVotes == int((len(servers)-1)/2) {
+                    // Delivers message to itself
+                    masterChan <- eMsg.NewMaster
+                    this.RemoveMemberGlobal(master.name)
+                    this.SendNewMasterMsg()
+                    UpdateMaster(eMsg.NewMaster)
+                }
+            case "novote":
+        }
     }
 }
 
@@ -184,8 +262,9 @@ func main() {
 	readGroupConfig()
 	readMusicConfig()
 	
-	//InitialHeartBeat()
-	//go getDeadServer()
+	// InitialHeartBeat()
+	// go getDeadServer()
+    // go GetElecMsg()
 
 	go listeningMsg()
     startHTTP()

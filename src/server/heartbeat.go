@@ -90,6 +90,14 @@ func (this *HeartBeat) sendAliveMsg(){
 			if time.Now().After(latestTime.Add(time.Second * DEAD_DETECT)) {
 				fmt.Println("Found a dead server", server)
 				delete(this.timeStamps, server)
+				// Delete the tracking servers
+				for i := range this.track_server {
+					if this.track_server[i] == server {
+						this.track_server = append(this.track_server[:i], this.track_server[i+1:]...)
+						this.track_server_addr = append(this.track_server_addr[:i], this.track_server_addr[i+1:]...)
+						break
+					}
+				}
 				this.deadChannel <- server
 			}
 		}

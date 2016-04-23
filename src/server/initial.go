@@ -97,19 +97,27 @@ func readServerConfig(){ //clear
 	fmt.Println("[init-server] Servers: ", servers)	
 }
 
-func InitialHeartBeat(){
-	//TODO: make sure how to do heartbeat
+func InitialHeartBeat(master Server){
     fmt.Println("[init-heartbeat] heartbeat at port", myServer.heartbeat_port)
-    // argument : (myIP, other servers)
-    //var hbServers []string
-    hbServers := make([]string, len(servers)-1)
-    for i:= range servers {
-    	if servers[i] != myServer {
-    		hbServers = append(hbServers, servers[i].combineAddr("heartbeat"))
-    	}
+    // If this server is the master, track all the slaves
+    if myServer.name == master.name{
+    	hbServers := make([]string, len(servers)-1)
+    	for i:= range servers {
+	    	if servers[i] != myServer {
+	    		hbServers = append(hbServers, servers[i].combineAddr("heartbeat"))
+	    	}
+	    }
+    }
+    // Slaves: only keep track of the master
+    else {
+    	hbServers := make([]string, 1)
+    	hbServers = append(hbServers, master.combineAddr("heartbeat"))
     }
     fmt.Println("[init-heartbeat]",hbServers)
     
     heartBeatTracker.newInstance(myServer.combineAddr("heartbeat"), hbServers)
+
+    // Also InitialMulticaster
+    multicaster.Initiallized(myServer, servers)
 
 }
