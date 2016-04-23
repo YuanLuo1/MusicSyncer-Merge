@@ -34,16 +34,13 @@ func sendOneMsg(dest string, src string, kind string, data string) {
     	}
 	}*/
     conn.Close()
-    fmt.Println(groups);
+   // fmt.Println(groups);
 }
 
 func createGroup(msg *Message) {
 	if !isGroupNameExist(msg.Data){
-		var newGroup Group
-		newGroup.name = msg.Data
-		newGroup.serverList = make(map[string]bool)
-		newGroup.addServer(msg.Src)
-		groups = append(groups,newGroup)
+		groupMap[msg.Data] = myServer.cluster 
+    	hasGroups[msg.Data] = true
 	}
 }
 
@@ -52,26 +49,26 @@ func requestHandler(conn net.Conn) {
 	msg := &Message{}
 	dec.Decode(msg)
 	
-	fmt.Printf("Received:\n %+v\n", msg);
+	fmt.Printf("[MSG-rec] Received: %+v\n", msg);
 	switch msg.Kind {
 		case "create_group": 
 			createGroup(msg)
-			fmt.Println(groups)
-		case "join_group": 
+			//fmt.Println(groups)
+		/*case "join_group": 
 			for i:= range groups {
 				if groups[i].name == msg.Data {
 					groups[i].addServer(msg.Src)
 				}
 			}
-			fmt.Println(groups)
+			fmt.Println(groups)*/
 		//case "remove_server": removeServer(msg)
 		//case "group_list": groupList(msg)
 	}
 }
 
-func listeningMsg(myIp string, myPort string) {
-	fmt.Println("listening messages at port", myPort)
-	socket, err := net.Listen("tcp", myIp + ":" + myPort)
+func listeningMsg() {
+	fmt.Println("[init] communication at port", myServer.comm_port)
+	socket, err := net.Listen("tcp", myServer.combineAddr("comm"))
   	if err != nil { 
   		fmt.Println("tcp listen error") 
   	} 
@@ -85,9 +82,11 @@ func listeningMsg(myIp string, myPort string) {
 }
 
 func multicastServers(data string, kind string) {
-	for i := range servers{ 
-		if servers[i] != myServer {
-			sendOneMsg(servers[i].combineAddr("comm"), myServer.combineAddr("comm"), kind, data)
+	serverList := clusterMap[myServer.cluster]
+	fmt.Println("multicast",clusterMap)
+	for i := range serverList{ 
+		if serverList[i] != myServer.combineAddr("comm") {
+			sendOneMsg(serverList[i], myServer.combineAddr("comm"), kind, data)
 		}
 	}
 }
