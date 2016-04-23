@@ -7,9 +7,8 @@ import (
     "encoding/csv"
 )
 
-func readMusicConfig(){
+func readMusicConfig(){ //clear
 	file, err:= os.Open("./initMusic.csv")
-	musicList = make([]MusicList,100)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
@@ -29,18 +28,14 @@ func readMusicConfig(){
 		groupName := record[0]
 		musicFile := record[1]
 		if hasGroups[groupName] {
-			mList := new(MusicList)
-			mList.NewInstance()
-			mList.name = groupName
-			mList.add(musicFile) //problems here
-			musicList = append(musicList, *mList)
+			mList := getMusicList(groupName)
+			mList.add(musicFile)
 		}
-		
-		
     }
+	fmt.Println("[init] music list: ", musicList)
 }
 
-func readGroupConfig(){
+func readGroupConfig(){ //clear
 	hasGroups = make(map[string]bool)
 	groupMap = make(map[string]string)
 	file, err:= os.Open("./initGroups.csv")
@@ -59,22 +54,22 @@ func readGroupConfig(){
 			fmt.Println("[init] Error: ", err)
 			return
 		}
-		/*var newGroup Group
-		newGroup.name = record[0]
-		newGroup.serverList = make(map[string]bool)
-		newGroup.addServer(record[1])
-		groups = append(groups, newGroup)*/
-		
-		if(record[1] == myServer.cluster){
-			hasGroups[record[0]] = true
+		groupName := record[0] 
+		clusterName := record[1]
+		if(clusterName == myServer.cluster){
+			hasGroups[groupName] = true
+			mList := new(MusicList)
+			mList.NewInstance()
+			mList.name = groupName
+			musicList = append(musicList, *mList)
 		}
-		groupMap[record[0]] = record[1]
+		groupMap[groupName] = clusterName
     }
 	fmt.Println("[init-group] Group Map: ", groupMap)
 	fmt.Println("[init-group] Has Groups: ", hasGroups)
 }
 
-func readServerConfig(){
+func readServerConfig(){ //clear
 	clusterMap = make(map[string][]string)
 	file, err:= os.Open("./initServers.csv")
 	if err != nil {

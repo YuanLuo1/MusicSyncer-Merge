@@ -1,33 +1,7 @@
 package main
 import(
-	//"strings"
-	//"fmt"
+	"fmt"
 )
-/*type Group struct{
-	name string
-	serverList map[string]bool	
-}
-
-func (g Group) addServer(ip string) {
-	g.serverList[ip] = true
-}
-
-func (g Group) delServer(ip string) {
-	delete(g.serverList, ip)
-}
-
-
-func (g Group) setName(name string) {
-	g.name = name
-}
-
-func (g Group) getServerList() []string{
-	keys := make([]string, 0, len(g.serverList))
-	for k:= range g.serverList{
-		keys = append(keys, k)
-	}
-	return keys
-}*/
 
 func isGroupNameExist(groupName string) bool{
 	if _,ok := groupMap[groupName]; ok {
@@ -43,11 +17,7 @@ func isGroupHere(groupName string) bool {
 	return false
 }
 
-/*func getServerListByGroupname(groupName string) []string {
-	return clusterMap[groupMap[groupName]]
-}*/
-
-func getServerListByClustername(clusterName string) []string {
+func getServerListByClusterName(clusterName string) []string {
 	newList := clusterMap[clusterName]
 	list := make([]string, len(newList)-1)
 	for i:= range newList {
@@ -56,4 +26,18 @@ func getServerListByClustername(clusterName string) []string {
 		}
 	}
 	return list
+}
+
+func createNewGroupLocal(groupName string, clusterName string) {
+	groupMap[groupName] = clusterName 
+    hasGroups[groupName] = true
+    
+    newList := new(MusicList)
+    newList.NewInstance()
+    newList.name = groupName
+    musicList = append(musicList, *newList)
+    
+    fmt.Println("[Create] Group Map", groupMap)
+	fmt.Println("[Create] Has Groups", hasGroups)
+	fmt.Println("[Create] Music List", musicList)
 }

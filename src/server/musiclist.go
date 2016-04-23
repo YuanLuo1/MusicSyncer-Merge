@@ -20,7 +20,7 @@ type MusicList struct {
 	name string
 	orderList map[int]string // Key: Position, Value: FileName
 	fileList map[string]bool // Key: FileName value: Position
-	numFiles int
+	NumFiles int
 	lock *sync.Mutex
 }
 
@@ -37,7 +37,7 @@ func (this *MusicList) NewInstance(){
 	this.lock = new(sync.Mutex)
 	this.orderList = make(map[int]string)
 	this.fileList = make(map[string]bool)
-	this.numFiles = 0
+	this.NumFiles = 0
 }
 
 func hashCode(fileName string) int{
@@ -68,16 +68,21 @@ func (this *MusicList) selectServer(fileName string) []Server{
 	return fservers
 }
 
+
 func (this *MusicList) add(fileName string) {
+	this.lock.Lock()
 	this.fileList[fileName] = true
-	this.numFiles++
+	this.orderList[this.NumFiles] = fileName
+	this.NumFiles=this.NumFiles + 1
+	//fmt.Println()
+	this.lock.Unlock()
 }
 
 func (this *MusicList) Add(fileName string, hosts []string){
 	this.lock.Lock()
-	this.orderList[this.numFiles] = fileName
+	this.orderList[this.NumFiles] = fileName
 	this.fileList[fileName] = true
-	this.numFiles++
+	this.NumFiles++
 
 	// TODO: reach agreement among group servers (hosts)
 
@@ -103,8 +108,8 @@ func (this *MusicList) Add(fileName string, hosts []string){
 		}
 	}
 	fmt.Println("No servers contain this file")
-	this.numFiles--
-	delete(this.orderList, this.numFiles)
+	this.NumFiles--
+	delete(this.orderList, this.NumFiles)
 	delete(this.fileList, fileName)
 	this.lock.Unlock()
 }
@@ -165,14 +170,13 @@ func (this *MusicList) request(fileName string, addr string) bool{
 	return true
 }
 
-func getMusicList(groupName string) MusicList{
-	var list MusicList
+func getMusicList(groupName string) *MusicList{
 	for i:= range musicList {
 		if musicList[i].name == groupName {
-			list = musicList[i]
+			return &musicList[i]
 		}
 	}
-	return list
+	return nil
 }
 
 

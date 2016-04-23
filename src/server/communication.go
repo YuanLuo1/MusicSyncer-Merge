@@ -37,13 +37,40 @@ func sendOneMsg(dest string, src string, kind string, data string) {
    // fmt.Println(groups);
 }
 
-func createGroup(msg *Message) {
-	if !isGroupNameExist(msg.Data){
-		groupMap[msg.Data] = myServer.cluster 
-    	hasGroups[msg.Data] = true
+func whichCluster(ip string) string {
+	for i := range servers {
+		if servers[i].combineAddr("comm") == ip {
+			return servers[i].cluster
+		}
 	}
+	return ""
 }
 
+func handleCreateGroup(msg *Message) {
+	groupName := msg.Data
+	if !isGroupNameExist(groupName){
+		clusterName := whichCluster(msg.Src)
+		if clusterName == myServer.cluster {
+			hasGroups[msg.Data] = true
+			mList := new(MusicList)
+			mList.NewInstance()
+			mList.name = groupName
+			musicList = append(musicList, *mList)
+		} 
+		groupMap[groupName] = clusterName   	
+	}
+	fmt.Println("[MSG-HandlerCreateGroup] group map", groupMap)
+	fmt.Println("[MSG-HandlerCreateGroup] has groups", hasGroups);
+	fmt.Println("[MSG-HandlerCreateGroup] music list", musicList);
+}
+
+func handleJoinGroup(msg *Message) {
+	/*for i:= range groups {
+		if groups[i].name == msg.Data {
+				groups[i].addServer(msg.Src)
+		}
+	}*/
+}
 func requestHandler(conn net.Conn) {
 	dec := gob.NewDecoder(conn)
 	msg := &Message{}
@@ -52,15 +79,9 @@ func requestHandler(conn net.Conn) {
 	fmt.Printf("[MSG-rec] Received: %+v\n", msg);
 	switch msg.Kind {
 		case "create_group": 
-			createGroup(msg)
-			//fmt.Println(groups)
-		/*case "join_group": 
-			for i:= range groups {
-				if groups[i].name == msg.Data {
-					groups[i].addServer(msg.Src)
-				}
-			}
-			fmt.Println(groups)*/
+			handleCreateGroup(msg)
+		case "join_group":
+			handleJoinGroup(msg)
 		//case "remove_server": removeServer(msg)
 		//case "group_list": groupList(msg)
 	}
@@ -82,11 +103,11 @@ func listeningMsg() {
 }
 
 func multicastServers(data string, kind string) {
-	serverList := clusterMap[myServer.cluster]
-	fmt.Println("multicast",clusterMap)
-	for i := range serverList{ 
-		if serverList[i] != myServer.combineAddr("comm") {
-			sendOneMsg(serverList[i], myServer.combineAddr("comm"), kind, data)
+	//serverList := clusterMap[myServer.cluster]
+	//fmt.Println("multicast",clusterMap)
+	for i := range servers{ 
+		if servers[i] != myServer{
+			sendOneMsg(servers[i].combineAddr("comm"), myServer.combineAddr("comm"), kind, data)
 		}
 	}
 }
