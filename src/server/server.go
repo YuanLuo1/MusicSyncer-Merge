@@ -15,12 +15,15 @@ import (
 var (
     dir string
     servers []Server //all servers and port
+    masterServer map[string]Server
+    
     myServer Server //this server info
     heartBeatTracker = new(HeartBeat) //heart beat related
     
     musicList []MusicList //local groups music list
     hasGroups map[string]bool //local groups map
-    clusterMap map[string][]string //key:cluster name, value:cluster's server list
+    clusterMap map[string][]Server //key:cluster name, value:cluster's server list
+    //clusterMap map[string][]string
     groupMap map[string]string //key: groupName, value: cluster name
 
     /* New */
@@ -39,6 +42,7 @@ type Server struct {
     http_port string
     heartbeat_port string
     cluster string
+    heartbeatFreq int
 }
 
 func (s Server) combineAddr(port string) string{
@@ -58,7 +62,7 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
     } else if r.Method == "POST" {
     	r.ParseForm()
     	groupName := strings.TrimSpace(r.PostFormValue("groupname"))
-    	if !isGroupNameExist(groupName) { 
+    	if !isGroupNameExist(groupName) {
     		createNewGroupLocal(groupName, myServer.cluster) //local
     		multicastServers(groupName, "create_group") //check group type			
 			http.Redirect(w, r, "/upload.html", http.StatusFound)
@@ -95,9 +99,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 func redirectToCorrectServer(groupName string, w http.ResponseWriter, r *http.Request) {
 	serverList := clusterMap[groupMap[groupName]]
-	tmp := strings.Split(serverList[0], ":")
-	tmp[0] = tmp[0] + ":8282"
-	http.Redirect(w,r, tmp[0]+"/upload.html", http.StatusFound)
+	http.Redirect(w,r, serverList[0].combineAddr("http")+"/upload.html", http.StatusFound)
 }
 
 func addfileHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +109,8 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
         token := fmt.Sprintf("%x", hasher.Sum(nil))
         t, _ := template.ParseFiles("UI/upload.html")
         t.Execute(w, token)
-    } else {
+    } else if r.Method == "POST" {
+    	fmt.Println("Upload Post")
         r.ParseMultipartForm(32 << 20)
         file, handler, err := r.FormFile("uploadfile")
         groupName := strings.TrimSpace(r.PostFormValue("groupname"))
@@ -116,23 +119,24 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
             fmt.Println(err)
             return
         }
-        defer file.Close()
+        // defer file.Close()
         fmt.Println("[upload] file name: ",handler.Filename)
         f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
         
         //TODO: check
         mList := getMusicList(groupName)
+        fmt.Println("MList: ", mList)
         mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
         
         if err != nil {
             fmt.Println(err)
             return
         }
-        defer f.Close()
+        // defer f.Close()
         
         io.Copy(f, file)
-        
-        http.Redirect(w, r, "/upload.html", 301)
+        fmt.Println("Upload success")
+        // http.Redirect(w, r, "/upload.html", 301)
     }
 }
 
@@ -168,7 +172,6 @@ func startHTTP() {
 func getDeadServer(){ 
     //fmt.Println("Get dead servers from heartbeat manager's deadchannel")
     deadServerChannel := heartBeatTracker.GetDeadChannel()
-    // TODO: Do something for the dead servers
     
     for {
 		dead := <-deadServerChannel
@@ -178,32 +181,49 @@ func getDeadServer(){
         if master == myServer {
             memToRemove := myServer
             for i:= range servers {
-                if servers[i].combineAddr("heartbeat") == dead {
+                if clusterMap[myServer.cluster][i].combineAddr("heartbeat") == dead {
                     memToRemove = servers[i]
                     break
                 }
             }
             if master == memToRemove {
                 fmt.Println("Can not found dead server within the list", dead)
+                return
             }
+            // Tell other slaves to remove this slave from their list
             multicaster.RemoveMemberGlobal(memToRemove.combineAddr("comm"))
-        }
+            //remove dead server from map
+            rmDeadServer(memToRemove)
+            
+        } else {
         // If I'm the client which detects the master is dead
         // Become a candidate and raise election
-        else {
+       
             // raise an election
-            isCandidate := mutlicaster.SendElectionMsg(master.combineAddr("comm"))
+            multicaster.SendElectionMsg(master.combineAddr("comm"))
             // Wait for others to vote for you
             select {
                 case newMaster := <-multicaster.masterChan:
+                	rmDeadServer(master)
                     UpdateMaster(newMaster)
-                case <- time.After(time.Second * 0.5):
+                case <- time.After(time.Millisecond * 500):
                     fmt.Println("time out in getting a new master")
             }
         }   
 
     }
 }
+
+func rmDeadServer(memToRemove Server) {
+	list := clusterMap[memToRemove.cluster]
+	for i:= range list {
+		if list[i] == memToRemove{
+			list = append(list[:i],list[i+1:]...)
+			break
+		}
+	}
+}
+
 
 // TODO: update the list in heartbeat and server.go
 func UpdateMaster(new_master string) {
@@ -212,37 +232,36 @@ func UpdateMaster(new_master string) {
     if myServer.name == new_master {
         master = myServer
         // TODO
-        heartbeat.updateAliveList()
-    }
-    else {
+        // heartbeat.updateAliveList()
+    } else {
         for i := range servers {
-            if servers[i].name = new_master {
+            if servers[i].name == new_master {
                 master = servers[i]
                 break
             }
         }
         // TODO
-        heartbeat.updateAliveList()
+        // heartbeat.updateAliveList()
     }
 }
 
 func GetElecMsg() {
-    elecChannel := mutlicaster.elecChan
     for {
-    eMsg := <-this.elecChan        
-    switch eMsg.Type {
+    	eMsg := <-multicaster.elecChan        
+    	switch eMsg.Type {
             case "candidate":
-                go this.SendVoteMessage(eMsg)
+                go multicaster.SendVoteMessage(eMsg)
             case "announce":
+            	rmDeadServer(master)
                 UpdateMaster(eMsg.NewMaster)
                 fmt.Println("Somebody else is the new master!")
             case "vote":
                 multicaster.numVotes += 1
                 if multicaster.numVotes == int((len(servers)-1)/2) {
                     // Delivers message to itself
-                    masterChan <- eMsg.NewMaster
-                    this.RemoveMemberGlobal(master.name)
-                    this.SendNewMasterMsg()
+                    multicaster.masterChan <- eMsg.NewMaster
+                    multicaster.RemoveMemberGlobal(master.name)
+                    multicaster.SendNewMasterMsg()
                     UpdateMaster(eMsg.NewMaster)
                 }
             case "novote":
@@ -258,13 +277,14 @@ func main() {
     var i int
     fmt.Scan(&i)
     myServer = servers[i]
+    master = masterServer[myServer.cluster]
 
 	readGroupConfig()
 	readMusicConfig()
 	
-	// InitialHeartBeat()
-	// go getDeadServer()
-    // go GetElecMsg()
+	//InitialHeartBeat(master)
+	//go getDeadServer()
+    //go GetElecMsg()
 
 	go listeningMsg()
     startHTTP()

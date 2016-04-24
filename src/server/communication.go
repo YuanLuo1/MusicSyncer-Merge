@@ -6,17 +6,17 @@ import(
     "net"
 )
 
-type Message struct{
-	Dst string
-	Src string
-	Kind string
-	Data string	
-}
+//type Message struct{
+//	Dst string
+//	Src string
+//	Kind string
+//	Data string	
+//}
 
 func sendOneMsg(dest string, src string, kind string, data string) {
 	//fmt.Println("start client");
-	msg := &Message{dest, src, kind, data}
-    conn, err := net.Dial("tcp", msg.Dst)
+	msg := &Message{dest, src, kind, data, ListContent{}, ElectionMsg{}}
+    conn, err := net.Dial("tcp", msg.Dest)
     if err != nil {
         fmt.Println("Connection error: ", err)
     }
@@ -47,11 +47,11 @@ func whichCluster(ip string) string {
 }
 
 func handleCreateGroup(msg *Message) {
-	groupName := msg.Data
+	groupName := msg.RemMemName
 	if !isGroupNameExist(groupName){
 		clusterName := whichCluster(msg.Src)
 		if clusterName == myServer.cluster {
-			hasGroups[msg.Data] = true
+			hasGroups[msg.RemMemName] = true
 			mList := new(MusicList)
 			mList.NewInstance()
 			mList.name = groupName
@@ -77,7 +77,7 @@ func requestHandler(conn net.Conn) {
 	dec.Decode(msg)
 	
 	fmt.Printf("[MSG-rec] Received: %+v\n", msg);
-	switch msg.Kind {
+	switch msg.Type {
 		case "create_group": 
 			handleCreateGroup(msg)
 		case "join_group":

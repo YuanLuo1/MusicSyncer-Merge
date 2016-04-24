@@ -17,11 +17,11 @@ func isGroupHere(groupName string) bool {
 	return false
 }
 
-func getServerListByClusterName(clusterName string) []string {
+func getServerListByClusterName(clusterName string) []Server {
 	newList := clusterMap[clusterName]
-	list := make([]string, len(newList)-1)
+	list := make([]Server, len(newList)-1)
 	for i:= range newList {
-		if newList[i] != myServer.combineAddr("comm"){
+		if newList[i] != myServer {
 			list = append(list, newList[i])
 		}
 	}

@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	HEARTBEAT_FREQUENCY = 1
 	DEAD_DETECT = 3
 )
 
@@ -25,6 +24,8 @@ type HeartBeat struct {
 	timeStamps map[string]time.Time
 	deadChannel chan string
 	lock *sync.Mutex
+	
+	serverHBFreq []int
 }
 
 func checkErr(err error){
@@ -34,7 +35,7 @@ func checkErr(err error){
 	}
 }
 
-func (this *HeartBeat) newInstance(host string, connect_servers []string){
+func (this *HeartBeat) newInstance(host string, connect_servers []Server){
 	this.host = host
 	// Set up listen socket
 	addr, err := net.ResolveUDPAddr("udp", this.host)
@@ -46,19 +47,23 @@ func (this *HeartBeat) newInstance(host string, connect_servers []string){
 	this.lock = new(sync.Mutex)
 	this.deadChannel = make(chan string)
 	this.updateAliveList(connect_servers)
+	
 	go this.recvAliveMsg()
 	go this.sendAliveMsg()
 }
 
-func (this *HeartBeat) updateAliveList(connect_servers []string){
+func (this *HeartBeat) updateAliveList(connect_servers []Server){
 	this.lock.Lock()
+	this.serverHBFreq = make([]int, len(connect_servers))
+	this.track_server = make([]string, len(connect_servers))
 	this.track_server_addr = make([]*net.UDPAddr, len(connect_servers))
 	for idx, server := range connect_servers{
-		addr, err := net.ResolveUDPAddr("udp", server)
+		addr, err := net.ResolveUDPAddr("udp", server.combineAddr("heartbeat"))
 		checkErr(err)
+		this.track_server[idx] = server.combineAddr("heartbeat")
 		this.track_server_addr[idx] = addr
+		this.serverHBFreq[idx] = server.heartbeatFreq
 	}
-	this.track_server = connect_servers
 	this.timeStamps = make(map[string]time.Time)
 	this.lock.Unlock()
 }
@@ -76,18 +81,19 @@ func (this *HeartBeat) recvAliveMsg(){
 	}
 }
 
-func (this *HeartBeat) sendAliveMsg(){
-	ticker := time.NewTicker(time.Second * HEARTBEAT_FREQUENCY)
-	for _ = range ticker.C {
-		this.lock.Lock()
-		// Send message to every other servers
-		for _, addr := range this.track_server_addr {
-			_, _ = this.listenSock.WriteToUDP([]byte(this.host), addr)
-		}
-		
-		// To check whether the track servers are still alive
-		for server, latestTime := range this.timeStamps {
-			if time.Now().After(latestTime.Add(time.Second * DEAD_DETECT)) {
+func (this *HeartBeat) startTicker(freq int, connServer string, connServerAddr *net.UDPAddr){
+	ticker := time.NewTicker(time.Millisecond * time.Duration(freq))
+	go func() {
+		for _ = range ticker.C {
+			this.lock.Lock()
+			// Send message to corresponding slave/master
+			this.listenSock.WriteToUDP([]byte(this.host), connServerAddr)
+			
+			// To check whether the track servers are still alive
+			server := connServer
+			latestTime := this.timeStamps[server]
+			
+			if time.Now().After(latestTime.Add(time.Millisecond * DEAD_DETECT * time.Duration(freq))) {
 				fmt.Println("Found a dead server", server)
 				delete(this.timeStamps, server)
 				// Delete the tracking servers
@@ -100,9 +106,41 @@ func (this *HeartBeat) sendAliveMsg(){
 				}
 				this.deadChannel <- server
 			}
+			this.lock.Unlock()
 		}
-		this.lock.Unlock()
+	}()
+}
+
+func (this *HeartBeat) sendAliveMsg(){
+	for i:= 0; i< len(this.track_server); i++ {
+		go this.startTicker(this.serverHBFreq[i], this.track_server[i], this.track_server_addr[i])
 	}
+//	ticker := time.NewTicker(time.Millisecond * HEARTBEAT_FREQUENCY)
+//	for _ = range ticker.C {
+//		this.lock.Lock()
+//		// Send message to every other servers
+//		for _, addr := range this.track_server_addr {
+//			_, _ = this.listenSock.WriteToUDP([]byte(this.host), addr)
+//		}
+//		
+//		// To check whether the track servers are still alive
+//		for server, latestTime := range this.timeStamps {
+//			if time.Now().After(latestTime.Add(time.Second * DEAD_DETECT)) {
+//				fmt.Println("Found a dead server", server)
+//				delete(this.timeStamps, server)
+//				// Delete the tracking servers
+//				for i := range this.track_server {
+//					if this.track_server[i] == server {
+//						this.track_server = append(this.track_server[:i], this.track_server[i+1:]...)
+//						this.track_server_addr = append(this.track_server_addr[:i], this.track_server_addr[i+1:]...)
+//						break
+//					}
+//				}
+//				this.deadChannel <- server
+//			}
+//		}
+//		this.lock.Unlock()
+//	}
 }
 
 func (this *HeartBeat) GetDeadChannel() chan string{

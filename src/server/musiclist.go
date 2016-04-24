@@ -78,7 +78,12 @@ func (this *MusicList) add(fileName string) {
 	this.lock.Unlock()
 }
 
-func (this *MusicList) Add(fileName string, hosts []string){
+func (this *MusicList) Add(fileName string, serverList []Server){
+	hosts := make([]string, len(serverList))
+	for i:= range serverList{
+		hosts = append(hosts, serverList[i].combineAddr("comm"))	
+	}
+	fmt.Println("MusicList.ADD: ", this)
 	this.lock.Lock()
 	this.orderList[this.NumFiles] = fileName
 	this.fileList[fileName] = true
@@ -171,6 +176,8 @@ func (this *MusicList) request(fileName string, addr string) bool{
 }
 
 func getMusicList(groupName string) *MusicList{
+	groupName = "pop"
+	fmt.Println("getMusicList(): groupName/ ", groupName)
 	for i:= range musicList {
 		if musicList[i].name == groupName {
 			return &musicList[i]

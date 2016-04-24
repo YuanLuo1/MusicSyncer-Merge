@@ -19,7 +19,7 @@ type ElectionMsg struct{
 	NewMaster string
 }
 
-type ListConent struct {
+type ListContent struct {
 	ListName string
 	Type string
 	Pos string
@@ -30,8 +30,8 @@ type Message struct {
 	Dest string
 	Src string
 	Type string
-	remMemName string
-	ListInfo ListConent
+	RemMemName string 	// remMemName can be either "data" or remove member name depends on Type
+	ListInfo ListContent
 	ElectionInfo ElectionMsg
 }
 
@@ -44,7 +44,7 @@ type Mulitcaster struct {
 	members map[string]string
 	myInfo Server
 	myId string
-	msgChans map[string]chan ListConent 	// key: MusicList name, value: new message
+	msgChans map[string]chan ListContent 	// key: MusicList name, value: new message
 	ackChans map[string]chan string 	// Key: MusicList name, value: Ack messages
 	elecChan chan ElectionMsg
 	sender RPCRecver
@@ -55,55 +55,14 @@ type Mulitcaster struct {
 	electionLock *sync.Mutex
 }
 
-/*
- * Below are how we handle the rpc for multicasting
- */
-
-func (this *Mulitcaster) Initiallized(server Server, members []Server){
-	this.members = make(map[string]string)
-	for s := range members {
-		// TODO: add server name as key and server ip + comm_port as server
-		this.members[s.name] = s.ip + ":" + s.comm_port
-	}
-	this.myInfo = server
-	this.sender = RPCRecver{this, make(map[string]chan string)}
-
-	this.voted = false
-	this.numVotes = 0
-	this.masterChan = make(chan string)
-
-	this.ackChans = make(map[string]chan string)
-	this.msgChans = make(map[string]chan Message)
-	this.elecChan = make(chan ElectionMsg, 128)
-	this.electionLock = new(sync.Mutex)
-	go this.lisenter(server)
-}
-
-/*
- * Start the listener which runs the multicaster 
- */
-func (this *Mulitcaster) lisenter(server Server){
-	rpc.Register(&this.recver)
-	l, e := net.Listen("tcp", ":"+server.comm_port)
-	if e != nil {
-		log.Fatal("listen error:", e)
-	}
-	for{
-		c, e := l.Accept()
-		if e != nil {
-			log.Fatal("client connect error: ", e)
-		}
-		go rpc.ServeConn(c)
-	}
-}
-
 // All should return 'success' if communicate successfully
-func (this *RPCRecver) Communicate (msg Message, reply *string) {
+func (this *RPCRecver) Communicate (msg Message, reply *string) error{
+	*reply = ""
 	switch msg.Type {
 	case "remMem":
 		// Only master can remove member
-		fmt.Println("Remove member: ", msg.remMemName)
-		this.rcvMedia.RemoveMemberLocal(msg.remMemName)
+		fmt.Println("Remove member: ", msg.RemMemName)
+		this.rcvMedia.RemoveMemberLocal(msg.RemMemName)
 		*reply = "success"
 	case "election":
 		this.rcvMedia.elecChan <- msg.ElectionInfo
@@ -117,7 +76,7 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) {
 
 		// New list 
 		if msg.ListInfo.Type == "create" {
-			this.rcvMedia.msgChans[msg.ListInfo.ListName] = make(chan ListConent)
+			this.rcvMedia.msgChans[msg.ListInfo.ListName] = make(chan ListContent)
 			this.rcvMedia.ackChans[msg.ListInfo.ListName] = make (chan string)
 			this.ackChans[msg.ListInfo.ListName] = make (chan string)
 		}
@@ -147,16 +106,60 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) {
 		fmt.Println("Message type not correct: ", msg.Type)
 		*reply = ""
 	}
+	return nil
+}
+
+
+/*
+ * Below are how we handle the rpc for multicasting
+ */
+
+func (this *Mulitcaster) Initiallized(server Server, members []Server){
+	this.members = make(map[string]string)
+	for s := range members {
+		// TODO: add server name as key and server ip + comm_port as server
+		this.members[members[s].name] = members[s].combineAddr("comm")
+	}
+	this.myInfo = server
+	this.sender = RPCRecver{this, make(map[string]chan string)}
+
+	this.voted = false
+	this.numVotes = 0
+	this.masterChan = make(chan string)
+
+	this.ackChans = make(map[string]chan string)
+	this.msgChans = make(map[string]chan ListContent)
+	this.elecChan = make(chan ElectionMsg, 128)
+	this.electionLock = new(sync.Mutex)
+	go this.lisenter(server)
+}
+
+/*
+ * Start the listener which runs the multicaster 
+ */
+func (this *Mulitcaster) lisenter(server Server){
+	rpc.Register(&(this.sender))
+	l, e := net.Listen("tcp", ":"+server.comm_port)
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
+	for{
+		c, e := l.Accept()
+		if e != nil {
+			log.Fatal("client connect error: ", e)
+		}
+		go rpc.ServeConn(c)
+	}
 }
 
 /* Multicast a update List message to inform update to all the members,
 	Only master can use this function */
-func (this *Mulitcaster) UpdateList(content ListConent) bool {
+func (this *Mulitcaster) UpdateList(content ListContent) bool {
 	msg := Message{"", this.myInfo.ip+":"+this.myInfo.comm_port, "listMsg", "", content, ElectionMsg{}}
 
 	// New list, Create new channel to rcv messages
 	if msg.ListInfo.Type == "create" {
-		this.msgChans[content.ListName] = make(chan ListConent)
+		this.msgChans[content.ListName] = make(chan ListContent)
 		this.ackChans[content.ListName] = make (chan string)
 		this.sender.ackChans[content.ListName] = make (chan string)
 	}
@@ -177,7 +180,7 @@ func (this *Mulitcaster) UpdateList(content ListConent) bool {
 			case <- this.ackChans[content.ListName]:
 				numRcv += 1
 				fmt.Println("rcv Ack ", numRcv)
-			case <- time.After(time.Second * 0.6):
+			case <- time.After(time.Millisecond * 600):
 				fmt.Println("Not enough vote :(")
 				if content.Type == "create" {
 					delete(this.msgChans, msg.ListInfo.ListName)
@@ -205,20 +208,19 @@ func (this *Mulitcaster) GetElecChan() chan ElectionMsg {
 	return this.elecChan
 }
 
-func (this *Mulitcaster) GetMsgChans(server string) chan Message {
+func (this *Mulitcaster) GetMsgChans(server string) chan ListContent {
 	return this.msgChans[server]
 } 
 
-func (this *Mulitcaster) SendMsg(msg Message) string{
+func (this *Mulitcaster) SendMsg(msg Message) {
+	// fmt.Println()
 	c, err := rpc.Dial("tcp", msg.Dest)
-	defer c.Close()
 	if err != nil {
-		log.Fatal(err)
-		return ""
+		return
 	}
+	defer c.Close()
 	var result string
-	c.Call("PasserRPC.Communicate", message, &result)
-	return result
+	c.Call("PasserRPC.Communicate", msg, &result)
 }
 
 func (this *Mulitcaster) RemoveMemberLocal(memberName string){
@@ -228,16 +230,13 @@ func (this *Mulitcaster) RemoveMemberLocal(memberName string){
 // Return true if success, else return false. Only for master
 func (this *Mulitcaster) RemoveMemberGlobal(memberName string) bool{
 	this.RemoveMemberLocal(memberName)
-	msg := Message{"", this.myInfo.ip+":"+this.myInfo.comm_port, "remMem", memberName, ListConent{}, ElectionMsg{}}
+	msg := Message{"", this.myInfo.combineAddr("comm"), "remMem", memberName, ListContent{}, ElectionMsg{}}
 	for key := range this.members{
 		if key == this.myInfo.name {
 			continue
 		}
 		msg.Dest = this.members[key]
-		if this.SendMsg(msg) != "success" {
-			fmt.Println("Error removing file to client: ", key)
-			return false
-		}
+		go this.SendMsg(msg)
 	}
 	return true
 }
@@ -255,7 +254,7 @@ func (this *Mulitcaster) SendElectionMsg(oldMaster string) bool{
 		if key == this.myInfo.name || key == oldMaster{
 			continue
 		}
-		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"candidate", this.myInfo.name}}
+		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"candidate", this.myInfo.name}}
 		go this.SendMsg(msg)
 	}
 	this.electionLock.Unlock()
@@ -269,7 +268,7 @@ func (this *Mulitcaster) SendNewMasterMsg() {
 		if key == this.myInfo.name {
 			continue
 		}
-		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"announce", this.myInfo.name}}
+		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"announce", this.myInfo.name}}
 		go this.SendMsg(msg)
 	}
 	this.electionLock.Unlock()
@@ -278,12 +277,13 @@ func (this *Mulitcaster) SendNewMasterMsg() {
 /* send election message, I will vote or not vote for you */
 func (this *Mulitcaster) SendVoteMessage(msg ElectionMsg) {
 	this.electionLock.Lock()
+	tmsg := Message{}
 	if this.voted == true {
-		msg := Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"vote", msg.NewMaster}}
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"vote", msg.NewMaster}}
 	} else {
-		msg := Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListConent{}, ElectionMsg{"novote", msg.NewMaster}}
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"novote", msg.NewMaster}}
 		this.voted = true
 	}
-	go this.SendMsg(msg)
+	go this.SendMsg(tmsg)
 	this.electionLock.Unlock()
 }

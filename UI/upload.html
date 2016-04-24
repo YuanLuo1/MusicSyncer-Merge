@@ -152,8 +152,9 @@
 
           <div class="single-bottom">
           <h3>Add a Music</h3>
-            <form enctype="multipart/form-data" action="http://127.0.0.1:8282/upload.html" method="post">
+            <form enctype="multipart/form-data" action="/upload.html" method="post">
               <div class="col-md-6 comment">
+              <input type="hidden" value="pop" name="groupname"/> 
               <input type="file" name="uploadfile" />
                   <input type="hidden" name="token" value="{{.}}"/>
               </div>
