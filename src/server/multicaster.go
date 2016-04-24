@@ -102,6 +102,10 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 		this.rcvMedia.ackChans[msg.ListInfo.ListName] <- "ack"
 	case "commit":
 		this.ackChans[msg.ListInfo.ListName] <- "ack"
+	case "requestupdate":
+		// Client request update
+		fmt.Println("Client request update List")
+		this.UpdateList(msg.ListInfo)
 	default:
 		fmt.Println("Message type not correct: ", msg.Type)
 		*reply = ""
@@ -150,6 +154,12 @@ func (this *Mulitcaster) lisenter(server Server){
 		}
 		go rpc.ServeConn(c)
 	}
+}
+
+/* Slave request master to modify the music list */
+func (this *Mulitcaster) RequestUpdateList(content ListContent) {
+	msg := Message{master.combineAddr("comm_port"), this.myInfo.combineAddr("comm_port"), "requestupdate", "", content, ElectionMsg{}}
+	go this.SendMsg(msg)
 }
 
 /* Multicast a update List message to inform update to all the members,
@@ -208,8 +218,8 @@ func (this *Mulitcaster) GetElecChan() chan ElectionMsg {
 	return this.elecChan
 }
 
-func (this *Mulitcaster) GetMsgChans(server string) chan ListContent {
-	return this.msgChans[server]
+func (this *Mulitcaster) GetMsgChans(list string) chan ListContent {
+	return this.msgChans[list]
 } 
 
 func (this *Mulitcaster) SendMsg(msg Message) {
@@ -254,7 +264,7 @@ func (this *Mulitcaster) SendElectionMsg(oldMaster string) bool{
 		if key == this.myInfo.name || key == oldMaster{
 			continue
 		}
-		msg := Message{this.members[key], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"candidate", this.myInfo.name}}
+		msg := Message{this.members[key], this.myInfo.combineAddr("comm"), "election", "", ListContent{}, ElectionMsg{"candidate", this.myInfo.name}}
 		go this.SendMsg(msg)
 	}
 	this.electionLock.Unlock()

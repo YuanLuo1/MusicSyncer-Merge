@@ -124,7 +124,7 @@ func InitialHeartBeat(master Server){
 	    	}
 	    }
     } else {
-    // Slaves: only keep track of the master
+	    // Slaves: only keep track of the master
     
     	hbServers = make([]Server, 1)
     	hbServers[0] = master
