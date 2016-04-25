@@ -22,7 +22,7 @@ func sendOneMsg(dest string, src string, kind string, data string) {
     }
     encoder := gob.NewEncoder(conn)
     encoder.Encode(msg)
-   
+    
     /*connbuf := bufio.NewReader(conn)
 	for{
     	str, err := connbuf.ReadString('\n')
@@ -107,6 +107,7 @@ func multicastServers(data string, kind string) {
 	//fmt.Println("multicast",clusterMap)
 	for i := range servers{ 
 		if servers[i] != myServer{
+			//fmt.Println("[debug]multicast",servers[i].comm_port)
 			sendOneMsg(servers[i].combineAddr("comm"), myServer.combineAddr("comm"), kind, data)
 		}
 	}

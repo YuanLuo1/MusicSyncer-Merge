@@ -67,8 +67,7 @@ func (this *HeartBeat) updateAliveList(connect_servers []Server){
 		this.track_server[0] = this.connect_servers[0].combineAddr("heartbeat")
 		this.track_server_addr[0] = addr
 		this.serverHBFreq[0] = this.host.heartbeatFreq
-	}
-	else {
+	} else {
 		// Master keep track of slaves heartbeat based on their frequency
 		for idx, server := range connect_servers{
 			addr, err := net.ResolveUDPAddr("udp", server.combineAddr("heartbeat"))
@@ -117,8 +116,8 @@ func (this *HeartBeat) recvAliveMsg(){
 }
 
 func (this *HeartBeat) startTicker(freq int, connServer string, connServerAddr *net.UDPAddr){
-	ticker := time.NewTicker(time.Millisecond * time.Duration(freq))
 	go func() {
+		ticker := time.NewTicker(time.Millisecond * time.Duration(freq))
 		for _ = range ticker.C {
 			this.lock.Lock()
 			// Send message to corresponding slave/master
