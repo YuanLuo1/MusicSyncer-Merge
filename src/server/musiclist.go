@@ -48,9 +48,9 @@ func hashCode(fileName string) int{
 	return result
 }
 
-func (this *MusicList) selectServer(fileName string) []Server{
+func (this *MusicList) selectServer(fileName string, candidates []Server) []Server{
 	/* Global value for servers in server.go */ 
-	hcode := hashCode(fileName) % len(servers)
+	hcode := hashCode(fileName) % len(candidates)
 	numServers := int(math.Sqrt(float64(hcode)))
 	fservers := make([]Server, numServers)
 	i := 0
@@ -58,16 +58,15 @@ func (this *MusicList) selectServer(fileName string) []Server{
 		if i == numServers {
 			break
 		}
-		fservers[i] = servers[hcode]
+		fservers[i] = candidates[hcode]
 		i += 1
 		hcode += 1
-		if hcode == len(servers){
+		if hcode == len(candidates){
 			hcode = 0
 		}
 	}
 	return fservers
 }
-
 
 func (this *MusicList) add(fileName string) {
 	this.lock.Lock()
@@ -85,11 +84,9 @@ func (this *MusicList) Add(fileName string, serverList []Server){
 	}
 	fmt.Println("MusicList.ADD: ", this)
 	this.lock.Lock()
-	this.orderList[this.NumFiles] = fileName
-	this.fileList[fileName] = true
-	this.NumFiles++
-
-	// TODO: reach agreement among group servers (hosts)
+	// this.orderList[this.NumFiles] = fileName
+	// this.fileList[fileName] = true
+	// this.NumFiles++
 
 	// if file exists, don't need to request file from other servers
 	if checkFileExist(fileName){
@@ -99,8 +96,7 @@ func (this *MusicList) Add(fileName string, serverList []Server){
 	fservers := this.selectServer(fileName)
 	dest := make([]Server, len(fservers))
 	perm := rand.Perm(len(fservers))
-	// dest := make([]string, len(hosts))
-	// perm := rand.Perm(len(hosts))
+
 	for i, v := range perm {
 		dest[v] = fservers[i]
 	}

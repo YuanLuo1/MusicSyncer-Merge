@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
+	"bufio"
 )
 
 var (
@@ -45,16 +47,15 @@ type Server struct {
 	heartbeat_port string
 	cluster        string
 	heartbeatFreq  int
+    FilePort 	   string
 }
 
 func (s Server) combineAddr(port string) string {
 	switch port {
-	case "comm":
-		return s.ip + ":" + s.comm_port
-	case "http":
-		return s.ip + ":" + s.http_port
-	case "heartbeat":
-		return s.ip + ":" + s.heartbeat_port
+		case "comm": return s.ip + ":" + s.comm_port
+		case "http": return s.ip + ":" + s.http_port
+		case "heartbeat": return s.ip + ":" + s.heartbeat_port
+        case "File": return s.ip + ":" + s.File_port
 	}
 	return ""
 }
@@ -143,22 +144,45 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 			// defer file.Close()
 			fmt.Println("[upload] file name: ", handler.Filename)
 			fmt.Println("[upload] group name: ", groupName)
-			f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 
 			//TODO: check
 			mList := getMusicList(groupName)
 
-			mList.add(handler.Filename)
-			fmt.Println("MList: ", mList)
-			//mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
+			// mList.add(handler.Filename)
+			// fmt.Println("MList: ", mList)
+			// mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			// defer f.Close()
+			// If Master, Simply broadcast to everyone
+	        if myServer == master {
+	            multicaster.UpdateList(ListContent{mList.name, "add", -1, handler.Filename})
+	            // TODO: file sharding and send file to others
+	        } else {
+	            // Slave will request update list to master, master will handle this request
+	            // and therefore broadcast to everyone
+	            multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.FileName})
+	            // mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
-			io.Copy(f, file)
+	        }
+	        // File Sharding, send to different servers
+	        candidates := mList.selectServer(handler.FileName, getServerListByClusterName(myServer.cluster))
+	        for i := range candidates {
+	            if candidates.combineAddr("File") != myServer.combineAddr("File"){
+	                clientSendFile(file, handler.FileName, candidates.combineAddr("File"))
+	            } else {
+	                // Save file to local directory if you're also one of the candidate
+	                if checkFileExist(handler.Filename){
+	                	continue
+	                }
+	                f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	                if err != nil {
+	                    fmt.Println(err)
+	                    return
+	                }
+	                io.Copy(f, file)
+	                f.close()
+	            }
+	        }
+
 			fmt.Println("Upload success")
 
 			data := Music{GroupName: groupName}
@@ -175,6 +199,25 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+}
+
+// Delivers message from multicaster's message chan
+func DeliverMessage(listName string) {
+    msgChan := multicaster.GetMsgChans(listName)
+    for {
+        listcontent := <- msgChan
+        switch listcontent.Type {
+        case "add":
+        	mList := getMusicList(listcontent.ListName)
+			mList.add(listcontent.File)
+
+        case "delete":
+        	mList := getMusicList(listcontent.ListName)
+			mList.add(listcontent.File)
+       
+        case "update":
+        }
+    }
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) { //clear
@@ -274,22 +317,38 @@ func rmDeadServer(memToRemove Server) {
 
 // TODO: update the list in heartbeat and server.go
 func UpdateMaster(new_master string) {
-	multicaster.numVotes = 0
-	multicaster.voted = false
-	if myServer.name == new_master {
-		master = myServer
-		// TODO
-		// heartbeat.updateAliveList()
-	} else {
-		for i := range servers {
-			if servers[i].name == new_master {
-				master = servers[i]
-				break
-			}
-		}
-		// TODO
-		// heartbeat.updateAliveList()
-	}
+
+    multicaster.numVotes = 0
+    multicaster.voted = false
+    if myServer.name == new_master {
+        master = myServer
+        tmpList := make([]Server, 1)
+        cServerList := getServerListByClusterName(myServer.cluster)
+        for i := range cServerList {
+            if cServerList[i] != master {
+                tmpList = append(tmpList, cServerList[i])
+            }
+        }
+        fmt.Println("UpdateAliveList in master, now track: ", tmpList)
+        heartbeat.updateAliveList(tmpList)
+    } else {
+        tmpmaster := myServer
+        for i := range servers {
+            if servers[i].name == new_master {
+                tmpmaster = servers[i]
+                break
+            }
+        }
+
+        if tmpmaster == myServer {
+            fmt.Println("False finding new master in my list ")
+            return
+        }
+        master = tmpmaster
+        tmpList := make([]Server, 1)
+        tmpList = append(tmpList, master)
+        heartbeat.updateAliveList(tmpList)
+    }
 }
 
 func GetElecMsg() {
@@ -316,6 +375,196 @@ func GetElecMsg() {
 	}
 }
 
+/* 
+ * File Transfer as Client, either REQUEST when client select particular file we didnt have, 
+ * or SEND file when client add file, add file by using sharding to select best server
+ */
+
+ func clientRequestFile(fileName string, addr string) {
+
+    conn, err  := net.Dial("tcp", addr)
+    if err != nil {
+        log.Fatal(err)
+        fmt.Println("Unable to connect server")
+        return
+    }
+    fmt.Println("Connected to server ....")
+
+    // Dircetory -- where file saved
+    directory := "./test/"
+
+    // send action
+    conn.Write([]byte("get\n"))
+    // send request file name
+    conn.Write([]byte(fileName + "\n"))
+    // fmt.Fprintf(conn, fileName)
+    
+    msg, _ := bufio.NewReader(conn).ReadString('\n')
+    // if server doesn't have that file || client isn't in the group
+    if strings.Compare(msg, "success\n") != 0{
+        fmt.Println("<ERROR> ", msg)
+        return
+    }
+
+    var receivedBytes int64
+    // reader := bufio.NewReader(conn)
+    f, err := os.Create(directory + fileName)
+    defer f.Close()
+    if err != nil {
+        fmt.Println("Error creating file")
+    }
+    receivedBytes, err = io.Copy(f, conn)
+    conn.Close()
+    if err != nil {
+        panic("Transmission error")
+    }
+
+    fmt.Printf("Finished transferring file. Received: %d \n", receivedBytes)
+ }
+
+ func clientSendFile(sf multipart.File, fileName string, addr string) {
+
+    conn, err  := net.Dial("tcp", addr)
+    if err != nil {
+        log.Fatal(err)
+        fmt.Println("Unable to connect server")
+        return
+    }
+    fmt.Println("Connected to server ....")
+
+    // Send action
+    connection.Write([]byte("upload\n"))
+    // Send file name
+    connection.Write([]byte(fileName+"\n"))
+    msg, _ := bufio.NewReader(connection).ReadString('\n')
+    // if already exists
+    if strings.Compare(msg, "success\n") != 0{
+        fmt.Println("msg: ", msg)
+        fmt.Println("File already exists in server")
+        return
+    }
+
+    var n int64
+    n, err = io.Copy(connection, sf)
+    connection.Close()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(n, "bytes sent")
+ }
+
+/* File Transfer port Listener */
+
+func FileListener() {
+    var port string = "9999"
+
+    fmt.Println("Launching File Listener Port")
+    listen, err := net.Listen("tcp", ":"+myServer.FilePort)
+    if err != nil{
+        fmt.Println("<Error> Can not listen too port!")
+        return
+    }
+
+    for{
+        conn, err := listen.Accept()
+        conn.(*net.TCPConn).SetNoDelay(true)
+        if err != nil{
+            fmt.Println("<Error> Error when connecting to client!")
+            continue
+        }
+        go handleConnection(conn)
+    }
+}
+
+/*func checkFileExist(fileName string) bool{
+    fileName = "./test/" + fileName
+    if _, err := os.Stat(fileName); err == nil{
+        return true
+    }
+    return false
+}*/
+
+func handleConnection(conn net.Conn){
+    fmt.Println("Start handling connection")
+    reader := bufio.NewReader(conn)
+    request, _ := reader.ReadString('\n')
+    request = strings.Trim(request, "\n")
+    switch request{
+        case "upload":
+            fmt.Println("upload file")
+            serverRecvUploadFile(conn, reader)
+            return
+        case "get":
+            fmt.Println("user tries to retrieve file")
+            serverSendFile(conn, reader)
+            return
+    }
+    fmt.Println("action not valid....")
+    conn.Close()
+}
+
+func serverRecvUploadFile(conn net.Conn, reader *bufio.Reader){
+
+    // Dirctory
+    directory := "./test/"
+
+    fileName, _ := reader.ReadString('\n')
+    fileName = strings.Trim(fileName, "\n")
+    fmt.Println("Filename: ", fileName)
+    // Check if file already exists
+    if checkFileExist(fileName){
+        fmt.Println("file already exists\n")
+        fmt.Fprintf(conn, "File already exists\n")
+        return
+    }
+    fmt.Println("file not exists")
+    // send file success
+    fmt.Fprintf(conn, "success\n")
+
+    // Wait to read file
+    var receivedBytes int64
+    // reader := bufio.NewReader(conn)
+    f, err := os.Create(directory + fileName)
+    defer f.Close()
+    if err != nil {
+        fmt.Println("Error creating file")
+    }
+    receivedBytes, err = io.Copy(f, conn)
+    fmt.Println("recvUploadFile succeess!")
+    if err != nil {
+        panic("Transmission error")
+    }
+    fmt.Printf("Finished transferring file. Received: %d \n", receivedBytes)
+    conn.Close()
+}
+
+func serverSendFile(conn net.Conn, reader *bufio.Reader){
+    directory := "./test/"
+    fileName, _ := reader.ReadString('\n')
+    fileName = strings.Trim(fileName, "\n")
+    fmt.Println("fileName: ", fileName)
+    // we don't have that file
+    if !checkFileExist(fileName){
+        fmt.Fprintf(conn, "No such file\n")
+        return
+    }
+    fmt.Fprintf(conn, "success\n")
+    var n int64
+    file, err := os.Open(strings.TrimSpace(directory + fileName))
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+    n, err = io.Copy(conn, file)
+    conn.Close()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(n, "bytes sent")
+}
+
+/* MAIN FUNCTION RUNNING THE SERVER */
+
 func main() {
 	readServerConfig()
 
@@ -328,11 +577,11 @@ func main() {
 
 	readGroupConfig()
 	readMusicConfig()
-
-	//InitialHeartBeat(master)
-	//go getDeadServer()
-	//go GetElecMsg()
-
+	
+	// InitialHeartBeat(master)
+	// go getDeadServer()
+    // go GetElecMsg()
+    // go FileListener()
 	go listeningMsg()
 	startHTTP()
 }
