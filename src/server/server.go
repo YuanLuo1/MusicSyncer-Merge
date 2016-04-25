@@ -10,6 +10,8 @@ import (
     "crypto/md5"
     "strconv"
     "os"
+    "net"
+    "bufio"
 )
 
 var (
@@ -130,8 +132,7 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
         if myServer == master {
             multicaster.UpdateList(ListContent{mList.name, "add", -1, handler.Filename})
             // TODO: file sharding and send file to others
-        }
-        else {
+        } else {
             // Slave will request update list to master, master will handle this request
             // and therefore broadcast to everyone
             multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.FileName})
@@ -143,8 +144,7 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
         for i := range candidates {
             if candidates.combineAddr("File") != myServer.combineAddr("FIle"){
                 clientSendFile(file, handler.FileName, candidates.combineAddr("File"))
-            }
-            else {
+            } else {
                 // Save file to local directory if you're also one of the candidate
                 f, err := os.OpenFile("./test/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
                 if err != nil {
