@@ -9,7 +9,6 @@ import (
 	"strings"
 	"io"
 	"math"
-	"math/rand"
 )
 
 const (
@@ -74,44 +73,6 @@ func (this *MusicList) add(fileName string) {
 	this.orderList[this.NumFiles] = fileName
 	this.NumFiles=this.NumFiles + 1
 	//fmt.Println()
-	this.lock.Unlock()
-}
-
-func (this *MusicList) Add(fileName string, serverList []Server){
-	hosts := make([]string, len(serverList))
-	for i:= range serverList{
-		hosts = append(hosts, serverList[i].combineAddr("comm"))	
-	}
-	fmt.Println("MusicList.ADD: ", this)
-	this.lock.Lock()
-	// this.orderList[this.NumFiles] = fileName
-	// this.fileList[fileName] = true
-	// this.NumFiles++
-
-	// if file exists, don't need to request file from other servers
-	if checkFileExist(fileName){
-		return
-	}
-	// shuffle the hosts
-	fservers := this.selectServer(fileName)
-	dest := make([]Server, len(fservers))
-	perm := rand.Perm(len(fservers))
-
-	for i, v := range perm {
-		dest[v] = fservers[i]
-	}
-	// Request file from other servers
-	for _, addr := range dest{
-		if this.request(fileName, addr.combineAddr("comm")){
-			fmt.Println("music List: ", this.orderList)
-			this.lock.Unlock()
-			return
-		}
-	}
-	fmt.Println("No servers contain this file")
-	this.NumFiles--
-	delete(this.orderList, this.NumFiles)
-	delete(this.fileList, fileName)
 	this.lock.Unlock()
 }
 

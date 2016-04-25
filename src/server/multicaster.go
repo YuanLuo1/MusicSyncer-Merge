@@ -22,7 +22,7 @@ type ElectionMsg struct{
 type ListContent struct {
 	ListName string
 	Type string
-	Pos string
+	Pos int
 	File string
 }  
 
@@ -105,7 +105,7 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 	case "requestupdate":
 		// Client request update
 		fmt.Println("Client request update List")
-		this.UpdateList(msg.ListInfo)
+		this.rcvMedia.UpdateList(msg.ListInfo)
 	default:
 		fmt.Println("Message type not correct: ", msg.Type)
 		*reply = ""

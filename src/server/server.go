@@ -12,6 +12,8 @@ import (
 	"time"
 	"net"
 	"bufio"
+	"mime/multipart"
+	"log"
 )
 
 var (
@@ -55,7 +57,7 @@ func (s Server) combineAddr(port string) string {
 		case "comm": return s.ip + ":" + s.comm_port
 		case "http": return s.ip + ":" + s.http_port
 		case "heartbeat": return s.ip + ":" + s.heartbeat_port
-        case "File": return s.ip + ":" + s.File_port
+        case "File": return s.ip + ":" + s.FilePort 
 	}
 	return ""
 }
@@ -159,15 +161,15 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 	        } else {
 	            // Slave will request update list to master, master will handle this request
 	            // and therefore broadcast to everyone
-	            multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.FileName})
+	            multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.Filename})
 	            // mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
 	        }
 	        // File Sharding, send to different servers
-	        candidates := mList.selectServer(handler.FileName, getServerListByClusterName(myServer.cluster))
+	        candidates := mList.selectServer(handler.Filename, getServerListByClusterName(myServer.cluster))
 	        for i := range candidates {
-	            if candidates.combineAddr("File") != myServer.combineAddr("File"){
-	                clientSendFile(file, handler.FileName, candidates.combineAddr("File"))
+	            if candidates[i].combineAddr("File") != myServer.combineAddr("File"){
+	                clientSendFile(file, handler.Filename, candidates[i].combineAddr("File"))
 	            } else {
 	                // Save file to local directory if you're also one of the candidate
 	                if checkFileExist(handler.Filename){
@@ -179,7 +181,7 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 	                    return
 	                }
 	                io.Copy(f, file)
-	                f.close()
+	                f.Close()
 	            }
 	        }
 
@@ -330,7 +332,7 @@ func UpdateMaster(new_master string) {
             }
         }
         fmt.Println("UpdateAliveList in master, now track: ", tmpList)
-        heartbeat.updateAliveList(tmpList)
+        heartBeatTracker.updateAliveList(tmpList)
     } else {
         tmpmaster := myServer
         for i := range servers {
@@ -347,7 +349,7 @@ func UpdateMaster(new_master string) {
         master = tmpmaster
         tmpList := make([]Server, 1)
         tmpList = append(tmpList, master)
-        heartbeat.updateAliveList(tmpList)
+        heartBeatTracker.updateAliveList(tmpList)
     }
 }
 
@@ -433,10 +435,10 @@ func GetElecMsg() {
     fmt.Println("Connected to server ....")
 
     // Send action
-    connection.Write([]byte("upload\n"))
+    conn.Write([]byte("upload\n"))
     // Send file name
-    connection.Write([]byte(fileName+"\n"))
-    msg, _ := bufio.NewReader(connection).ReadString('\n')
+    conn.Write([]byte(fileName+"\n"))
+    msg, _ := bufio.NewReader(conn).ReadString('\n')
     // if already exists
     if strings.Compare(msg, "success\n") != 0{
         fmt.Println("msg: ", msg)
@@ -445,8 +447,8 @@ func GetElecMsg() {
     }
 
     var n int64
-    n, err = io.Copy(connection, sf)
-    connection.Close()
+    n, err = io.Copy(conn, sf)
+    conn.Close()
     if err != nil {
         log.Fatal(err)
     }
@@ -456,7 +458,6 @@ func GetElecMsg() {
 /* File Transfer port Listener */
 
 func FileListener() {
-    var port string = "9999"
 
     fmt.Println("Launching File Listener Port")
     listen, err := net.Listen("tcp", ":"+myServer.FilePort)
@@ -578,10 +579,10 @@ func main() {
 	readGroupConfig()
 	readMusicConfig()
 	
-	// InitialHeartBeat(master)
-	// go getDeadServer()
-    // go GetElecMsg()
-    // go FileListener()
+	InitialHeartBeat(master)
+	go getDeadServer()
+    go GetElecMsg()
+    go FileListener()
 	go listeningMsg()
 	startHTTP()
 }
