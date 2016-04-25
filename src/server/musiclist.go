@@ -176,7 +176,7 @@ func (this *MusicList) request(fileName string, addr string) bool{
 }
 
 func getMusicList(groupName string) *MusicList{
-	groupName = "pop"
+	//groupName = "pop"
 	fmt.Println("getMusicList(): groupName/ ", groupName)
 	for i:= range musicList {
 		if musicList[i].name == groupName {
