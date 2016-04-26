@@ -83,11 +83,6 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 		</div>
 	</div>
 	<!--header end here-->
-<script type="text/javascript">
-	function DoPost(){
-		$.post("join.html", {groupname: "hello"})
-	}
-</script>
 
 	<!--gallery-starts-->
 	<div class="gallery">
@@ -98,81 +93,17 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 			</div>
 			<section>
 				<ul id="da-thumbs" class="da-thumbs">
+					{{range $key,$value := .GroupMap}}
 					<li>
-						<a href="javascript:DoPost()">
+						<a href="join.html?{{$key}}">
 							<img src="images/g1.jpg" alt="" class="img-responsive">
 							<div>
-								<h5>Tom's Jazz</h5>
-								<span>Playlist</span>
+								<h5>{{$key}}</h5>
+								<span>Music List</span>
 							</div>
 						</a>
 					</li>
-					<li>
-						<a href="images/g2.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<form action="join.html" methode="post">
-								<input type="hidden" name="groupname" value="hello">
-							</form>
-							<img src="images/g2.jpg" alt="">
-							<div>
-								<h5>Lily's soft music</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>
-						<a href="images/g3.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g3.jpg" alt="">
-							<div>
-								<h5>John's RocknRoll</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>
-						<a href="images/g4.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g4.jpg" alt="">
-							<div>
-								<h5>Host</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>	
-						<a href="images/g5.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g5.jpg" alt="">
-							<div>
-								<h5>Host</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>
-						<a href="images/g6.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g6.jpg" alt="">
-							<div>
-								<h5>Host</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>
-						<a href="images/g7.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g7.jpg" alt="">
-							<div>
-								<h5>Host</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
-					<li>
-						<a href="images/g8.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
-							<img src="images/g8.jpg" alt="">
-							<div>
-								<h5>Host</h5>
-								<span>Playlist</span>
-							</div>
-						</a>
-					</li>
+					{{end}}
 					<li>
 						<a href="images/g9.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
 							<img src="images/g9.jpg" alt="">

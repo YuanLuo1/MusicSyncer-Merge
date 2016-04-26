@@ -57,13 +57,7 @@ func handleCreateGroup(msg *Message) {
 	fmt.Println("[MSG-HandlerCreateGroup] music list", musicList);
 }
 
-func handleJoinGroup(msg *Message) {
-	/*for i:= range groups {
-		if groups[i].name == msg.Data {
-				groups[i].addServer(msg.Src)
-		}
-	}*/
-}
+
 func requestHandler(conn net.Conn) {
 	dec := gob.NewDecoder(conn)
 	msg := &Message{}
@@ -74,7 +68,7 @@ func requestHandler(conn net.Conn) {
 		case "create_group": 
 			handleCreateGroup(msg)
 		case "join_group":
-			handleJoinGroup(msg)
+			//handleJoinGroup(msg)
 		//case "remove_server": removeServer(msg)
 		//case "group_list": groupList(msg)
 	}
@@ -95,7 +89,8 @@ func listeningMsg() {
   	}
 }
 
-func multicastServers(data string, kind string) {
+/*talk with all Servers*/
+func multicastServers(data string, kind string) { 
 	for i := range servers{ 
 		if servers[i] != myServer{
 			//fmt.Println("[debug]multicast",servers[i].comm_port)

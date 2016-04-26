@@ -2165,13 +2165,3 @@ body {
   background-image: url("../images/3iirf2f.png");
 }
 
-.copyrights {
-  text-align: center;
-  text-transform: capitalize;
-  margin: 50px;
-  color: rgba(0, 0, 0, 0.6);
-}
-.copyrights a {
-  color: rgba(152, 46, 75, 0.9);
-  text-decoration: none;
-}
