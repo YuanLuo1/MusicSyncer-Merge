@@ -76,7 +76,7 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 
 		// New list 
 		if msg.ListInfo.Type == "create" {
-			this.rcvMedia.msgChans[msg.ListInfo.ListName] = make(chan ListContent)
+			this.rcvMedia.msgChans[msg.ListInfo.ListName] = make(chan ListContent, 1024)
 			this.rcvMedia.ackChans[msg.ListInfo.ListName] = make (chan string)
 			this.ackChans[msg.ListInfo.ListName] = make (chan string)
 		}
@@ -169,7 +169,8 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 
 	// New list, Create new channel to rcv messages
 	if msg.ListInfo.Type == "create" {
-		this.msgChans[content.ListName] = make(chan ListContent)
+		fmt.Println("Create New list message")
+		this.msgChans[content.ListName] = make(chan ListContent, 1024)
 		this.ackChans[content.ListName] = make (chan string)
 		this.sender.ackChans[content.ListName] = make (chan string)
 	}
@@ -183,7 +184,7 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 	}
 
 	// Request message from 
-	numVote := int(len(this.members)/2)
+	numVote := len(this.members)
 	numRcv := 0
 	for i:=0; i<numVote-1; i++ {
 		select {
@@ -200,6 +201,7 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 				return false
 		}
 	}
+	fmt.Println("Yeah I've recved enough votes")
 	// Rcv a majority of votes, multicast commit message to those slaves
 	msg.Type = "commit"
 	for key := range this.members {
@@ -209,8 +211,11 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 		msg.Dest = this.members[key]
 		go this.SendMsg(msg)
 	}
+	fmt.Println("Finish sending commit message to everyone")
 	// Delivers to itself
+	fmt.Println(msg.ListInfo)
 	this.msgChans[content.ListName] <- msg.ListInfo
+	fmt.Println("finish delivers message to myself")
 	return true
 }
 

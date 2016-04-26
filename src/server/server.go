@@ -92,6 +92,15 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 			data := Music{GroupName: groupName}
 			data.FilesMap = make(map[string]string)
 			
+			// Send a request to every server to request create new server
+			if myServer == master {
+				fmt.Println("I'm a master and multicasting a  update to every slave")
+				go multicaster.UpdateList(ListContent{groupName, "create", -1, ""})
+			} else {
+				fmt.Println("I'm a slave and sending a request update to master")
+				go multicaster.RequestUpdateList(ListContent{groupName, "create", -1, ""})
+			}		
+			
 			t, _ := template.ParseFiles("UI/upload.html")
 			t.Execute(w, data)
 		} else {
@@ -673,10 +682,10 @@ func main() {
 	readGroupConfig()
 	readMusicConfig()
 
-	//InitialHeartBeat(master)
-	//go getDeadServer()
-	//go GetElecMsg()
-	//go FileListener()
+	InitialHeartBeat(master)
+	go getDeadServer()
+	go GetElecMsg()
+	go FileListener()
 	go listeningMsg()
 	
 	startHTTP()
