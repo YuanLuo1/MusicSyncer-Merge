@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 	"sync"
+	"bufio"
 )
 
 var (
@@ -89,6 +90,16 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 
 			data := Music{GroupName: groupName}
 			data.FilesMap = make(map[string]string)
+			
+			// Send a request to every server to request create new server
+			if myServer == master {
+				fmt.Println("I'm a master and multicasting a  update to every slave")
+				go multicaster.UpdateList(ListContent{groupName, "create", -1, ""})
+			} else {
+				fmt.Println("I'm a slave and sending a request update to master")
+				go multicaster.RequestUpdateList(ListContent{groupName, "create", -1, ""})
+			}		
+			
 			//data.FilesMap["test"] = "music/music.mp3"
 			//data.FilesMap["test2"] = "music/music.mp3"
 			//fmt.Println("[DDDDDDDDDDDDDDD]", data)
