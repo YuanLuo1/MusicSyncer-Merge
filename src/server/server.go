@@ -41,8 +41,11 @@ var (
 
 type Music struct {
 	GroupName string
-	FilesMap  map[string]string
-	//Link []string
+	FilesMap  map[string]string //key: music name, value: music path
+}
+
+type Group struct {
+	GroupMap map[string]string
 }
 
 type Server struct {
@@ -74,18 +77,16 @@ func (s Server) combineAddr(port string) string {
 }
 
 func createHandler(w http.ResponseWriter, r *http.Request) {
-	
-	if r.Method == "GET" {
-		fmt.Println("[debug] get")
-		
+	if r.Method == "GET" {		
 		t, _ := template.ParseFiles("UI/create.html")
 		t.Execute(w, nil)
 	} else if r.Method == "POST" {
 		r.ParseForm()
-		groupName := strings.TrimSpace(r.PostFormValue("groupname"))
+		groupName := r.PostFormValue("groupname")
 		fmt.Println("[debug]", groupName)
 		if !isGroupNameExist(groupName) {
 			createNewGroupLocal(groupName, myServer.cluster) //local
+			
 			//multicastServers(groupName, "create_group") //check group type
 
 			data := Music{GroupName: groupName}
@@ -100,15 +101,8 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 				go multicaster.RequestUpdateList(ListContent{groupName, "create", -1, ""})
 			}		
 			
-			//data.FilesMap["test"] = "music/music.mp3"
-			//data.FilesMap["test2"] = "music/music.mp3"
-			//fmt.Println("[DDDDDDDDDDDDDDD]", data)
-			//Files: []string{"test", "test1", "test2"}
-			//Link: []string{"music/music.mp3","music/music.mp3","music/music.mp3"}
 			t, _ := template.ParseFiles("UI/upload.html")
 			t.Execute(w, data)
-			//http.Redirect(w, r, "/upload.html/" + groupName, http.StatusFound)
-			//multicastServers(groupName, "create_group") //check group type
 		} else {
 			w.Write([]byte("Create Group failed, please try another groupname or check servers alive"))
 		}
@@ -119,27 +113,47 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 
 func joinHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		fmt.Println("[debug]this is the get request handler")
-		//TODO: get music list file and render to join.html
-		t, _ := template.ParseFiles("UI/join.html")
-		t.Execute(w, nil)
-	} else if r.Method == "POST" {
-		r.ParseForm()
-		groupName := strings.TrimSpace(r.FormValue("groupname"))
-		fmt.Println("[debug---joinin]",groupName)
-		
-		http.Redirect(w, r, "/upload.html", http.StatusFound)
+		fmt.Println(r.RequestURI)
+		if strings.Contains(r.RequestURI,"?") {
+			groupName := strings.Split(r.RequestURI,"?")[1]
+			fmt.Println("group name", groupName)
+			
+			mList := getMusicList(groupName)
+			
+			if mList != nil {
+				fmt.Println(mList)
+				data := Music{GroupName: groupName}
+				data.FilesMap = make(map[string]string)
+				for key, _ := range mList.fileList {
+					data.FilesMap[key] = "test/" + key
+				}
+				fmt.Println("[debuggggggg]", data)
+				t, _ := template.ParseFiles("UI/upload.html")
+				t.Execute(w, data)
+				
+			} else {
+				redirectToCorrectServer(groupName, w, r) 
+			}
+		} else {
+			fmt.Println("[debug]get request handler without groupname")		
+			data := Group{GroupMap: groupMap}
+			t, _ := template.ParseFiles("UI/join.html")
+			t.Execute(w, data)
+		}
 	} else {
 		fmt.Fprintf(w, "Error Method")
 	}
 }
 
 func redirectToCorrectServer(groupName string, w http.ResponseWriter, r *http.Request) {
+	fmt.Println(groupMap[groupName])
 	serverList := clusterMap[groupMap[groupName]]
-	http.Redirect(w, r, serverList[0].combineAddr("http")+"/upload.html", http.StatusFound)
+	fmt.Println(serverList)
+	fmt.Println("[Debug]redirect", serverList[0].combineAddr("http")+"/join.html?"+groupName)
+	http.Redirect(w, r, "http://"+serverList[0].combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 }
 
-func addfileHandler(w http.ResponseWriter, r *http.Request) {
+func fileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		hasher := md5.New()
 		io.WriteString(hasher, strconv.FormatInt(time.Now().Unix(), 10))
@@ -193,7 +207,9 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("[Debug]", deleteMusic)
 			
 			mList := getMusicList(groupName)
-			mList.delete(deleteMusic)
+			mList.delete(deleteMusic) //TODO: only delete local
+			
+			
 			fmt.Println("MList: ", mList)
 			
 			data := Music{GroupName: groupName}
@@ -253,7 +269,6 @@ func DeliverMessage(listName string) {
 		case "add":
 			mList := getMusicList(listcontent.ListName)
 			mList.add(listcontent.File)
-
 		case "delete":
 			mList := getMusicList(listcontent.ListName)
 			mList.add(listcontent.File)
@@ -272,14 +287,21 @@ func homeHandler(w http.ResponseWriter, r *http.Request) { //clear
 	}
 }
 
-func groupHandler(w http.ResponseWriter, r *http.Request) {
+func aboutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		//groupName := strings.Split(r.URL.Path[1:],"/")[1]
-		/*data := Music{Content: groupName}
-		fmt.Println(groupName)
-		t, _ := template.ParseFiles("UI/group.html")
-		t.Execute(w, data)*/
+		t, _ := template.ParseFiles("UI/about.html")
+		t.Execute(w, nil)	
+	} else {
+		fmt.Fprintf(w, "Error Method")
+	}
+}
 
+func contactHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t, _ := template.ParseFiles("UI/contact.html")
+		t.Execute(w, nil)	
+	} else {
+		fmt.Fprintf(w, "Error Method")
 	}
 }
 
@@ -294,9 +316,13 @@ func startHTTP() {
 	http.Handle("/test/",http.FileServer(http.Dir(".")))
 
 	http.HandleFunc("/index.html", homeHandler)
+	http.HandleFunc("/about.html", aboutHandler)
+	http.HandleFunc("/contact.html", contactHandler)
+	
 	http.HandleFunc("/create.html", createHandler)
 	http.HandleFunc("/join.html", joinHandler)
-	http.HandleFunc("/upload.html", addfileHandler)
+	http.HandleFunc("/upload.html", fileHandler)
+	
 	//http.HandleFunc("/upload.html/", groupHandler)
 	//http.HandleFunc("/leave", leaveHandler)
 
@@ -583,7 +609,6 @@ func handleConnection(conn net.Conn) {
 }
 
 func serverRecvUploadFile(conn net.Conn, reader *bufio.Reader) {
-
 	// Dirctory
 	directory := "./test/"
 
@@ -665,16 +690,3 @@ func main() {
 	
 	startHTTP()
 }
-
-/*func leaveHandler(w http.ResponseWriter, r *http.Request) {
-    //fmt.Fprintln(w, "<h1>%s!</h1>", r.URL.Path[1:])
-    r.ParseForm()
-    if r.Method == "GET" {
-    	fmt.Fprintf(w, "Error Method")
-    } else {
-    	ip := strings.TrimSpace(r.PostFormValue("clientip"))
-    	groupid := strings.TrimSpace(r.PostFormValue("groupid"))
-    	comMainGroup(groupid, "remove_server")
-    	//leaveGroup(ip, groupid)
-    }
-}*/
