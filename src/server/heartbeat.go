@@ -24,7 +24,7 @@ type HeartBeat struct {
 	timeStamps map[string]time.Time
 	deadChannel chan string
 	lock *sync.Mutex
-	
+	first bool
 	serverHBFreq []int
 }
 
@@ -47,16 +47,18 @@ func (this *HeartBeat) newInstance(host Server, connect_servers []Server){
 	this.lock = new(sync.Mutex)
 	this.deadChannel = make(chan string)
 	this.updateAliveList(connect_servers)
-	
+	this.first = true
 	go this.recvAliveMsg()
 	if this.host != master {
 		// Slave send hb to master to trigger connection
+		this.timeStamps[master.combineAddr("heartbeat")] = time.Now()
 		go this.sendAliveMsg()
 	}
 }
 
 func (this *HeartBeat) updateAliveList(connect_servers []Server){
 	this.lock.Lock()
+	fmt.Println("[updateAliveList] ", connect_servers)
 	this.serverHBFreq = make([]int, len(connect_servers))
 	this.track_server = make([]string, len(connect_servers))
 	this.track_server_addr = make([]*net.UDPAddr, len(connect_servers))
@@ -64,7 +66,7 @@ func (this *HeartBeat) updateAliveList(connect_servers []Server){
 	if len(connect_servers) != 0 && this.host.combineAddr("heartbeat") != master.combineAddr("heartbeat") {
 		addr, err := net.ResolveUDPAddr("udp", connect_servers[0].combineAddr("heartbeat"))
 		checkErr(err)
-		this.track_server[0] = this.connect_servers[0].combineAddr("heartbeat")
+		this.track_server[0] = connect_servers[0].combineAddr("heartbeat")
 		this.track_server_addr[0] = addr
 		this.serverHBFreq[0] = this.host.heartbeatFreq
 	} else {
@@ -77,7 +79,14 @@ func (this *HeartBeat) updateAliveList(connect_servers []Server){
 			this.serverHBFreq[idx] = server.heartbeatFreq
 		}
 	}
+	fmt.Println()
 	this.timeStamps = make(map[string]time.Time)
+	
+	if this.first == true && this.host.combineAddr("heartbeat") != master.combineAddr("heartbeat"){
+		// Slave send hb to master to trigger connection
+		this.timeStamps[master.combineAddr("heartbeat")] = time.Now()
+		go this.sendAliveMsg()
+	}
 	this.lock.Unlock()
 }
 
@@ -88,7 +97,7 @@ func (this *HeartBeat) recvAliveMsg(){
 		numBytes, _, err := this.listenSock.ReadFromUDP(buffer)
 		checkErr(err)
 		recvServerName := string(buffer[:numBytes])
-
+		// fmt.Println("[HeartBeat] recv a message from: ", recvServerName)
 		// Master check whether this is the first message, start sending heartbeat if first 
 		if this.host == master {
 			if _, ok := this.timeStamps[recvServerName]; !ok {
@@ -116,16 +125,20 @@ func (this *HeartBeat) recvAliveMsg(){
 }
 
 func (this *HeartBeat) startTicker(freq int, connServer string, connServerAddr *net.UDPAddr){
+	fmt.Println("[HeartBeat] start new Ticker with: " + connServer)
 	go func() {
+		// freq = 10000
 		ticker := time.NewTicker(time.Millisecond * time.Duration(freq))
 		for _ = range ticker.C {
 			this.lock.Lock()
 			// Send message to corresponding slave/master
 			this.listenSock.WriteToUDP([]byte(this.host.combineAddr("heartbeat")), connServerAddr)
-			
+			// this.listenSock.WriteToUDP([]byte(connServer), connServerAddr)
 			// To check whether the track servers are still alive
 			server := connServer
 			latestTime := this.timeStamps[server]
+			// fmt.Println(latestTime)
+			// fmt.Println("freq:", freq)
 			
 			if time.Now().After(latestTime.Add(time.Millisecond * DEAD_DETECT * time.Duration(freq))) {
 				fmt.Println("Found a dead server", server)
@@ -139,6 +152,8 @@ func (this *HeartBeat) startTicker(freq int, connServer string, connServerAddr *
 					}
 				}
 				this.deadChannel <- server
+				this.lock.Unlock()
+				return
 			}
 			this.lock.Unlock()
 		}

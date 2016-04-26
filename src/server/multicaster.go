@@ -22,7 +22,7 @@ type ElectionMsg struct{
 type ListContent struct {
 	ListName string
 	Type string
-	Pos string
+	Pos int
 	File string
 }  
 
@@ -58,10 +58,10 @@ type Mulitcaster struct {
 // All should return 'success' if communicate successfully
 func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 	*reply = ""
+	fmt.Println("[multicaster] rcv a message, type: ", msg.Type)
 	switch msg.Type {
 	case "remMem":
 		// Only master can remove member
-		fmt.Println("Remove member: ", msg.RemMemName)
 		this.rcvMedia.RemoveMemberLocal(msg.RemMemName)
 		*reply = "success"
 	case "election":
@@ -105,7 +105,7 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 	case "requestupdate":
 		// Client request update
 		fmt.Println("Client request update List")
-		this.UpdateList(msg.ListInfo)
+		this.rcvMedia.UpdateList(msg.ListInfo)
 	default:
 		fmt.Println("Message type not correct: ", msg.Type)
 		*reply = ""
@@ -230,10 +230,20 @@ func (this *Mulitcaster) SendMsg(msg Message) {
 	}
 	defer c.Close()
 	var result string
-	c.Call("PasserRPC.Communicate", msg, &result)
+	err = c.Call("RPCRecver.Communicate", msg, &result)
+	if err != nil {
+		fmt.Println("passer RPC error: ", err)
+	}
 }
 
 func (this *Mulitcaster) RemoveMemberLocal(memberName string){
+	fmt.Println("Remove member in local", memberName)
+	for i := range servers {
+		if servers[i].combineAddr("comm") == memberName {
+			rmDeadServer(servers[i])
+			break		
+		}
+	}
 	delete(this.members, memberName)
 }
 
@@ -286,12 +296,15 @@ func (this *Mulitcaster) SendNewMasterMsg() {
 
 /* send election message, I will vote or not vote for you */
 func (this *Mulitcaster) SendVoteMessage(msg ElectionMsg) {
+	fmt.Println("[Leader Election] sendvoteMessage")
 	this.electionLock.Lock()
 	tmsg := Message{}
 	if this.voted == true {
-		tmsg = Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"vote", msg.NewMaster}}
+		fmt.Println("[Leader Election] Already voted")
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm_port"), "election", "", ListContent{}, ElectionMsg{"novote", msg.NewMaster}}
 	} else {
-		tmsg = Message{this.members[msg.NewMaster], this.myInfo.ip+":"+this.myInfo.comm_port, "election", "", ListContent{}, ElectionMsg{"novote", msg.NewMaster}}
+		fmt.Println("[Leader Election] I will vote for ", msg.NewMaster)
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm_port"), "election", "", ListContent{}, ElectionMsg{"vote", msg.NewMaster}}
 		this.voted = true
 	}
 	go this.SendMsg(tmsg)

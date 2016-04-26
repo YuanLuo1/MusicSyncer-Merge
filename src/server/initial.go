@@ -86,10 +86,10 @@ func readServerConfig(){ //clear
 		if err == io.EOF {
 	    	break
 		} else if err != nil {
-			fmt.Println("[init] Error: ", err)
+			fmt.Println("[init] Error!!!!!!!!!!: ", err)
 			return
 		}
-		newServer :=  Server{record[1], record[0],record[2], record[3], record[4], record[5], -1} //ip, comm, http, heartbeat, cluster
+		newServer :=  Server{record[1], record[0],record[2], record[3], record[4], record[5], -1, record[8]} //ip, comm, http, heartbeat, cluster
 		i, err := strconv.Atoi(record[7])
 		if err != nil {
 			fmt.Println("error in parsing heart beat freq to integer")
@@ -132,8 +132,7 @@ func InitialHeartBeat(master Server){
     }
     fmt.Println("[init-heartbeat]",hbServers)
     
-    heartBeatTracker.newInstance(myServer.combineAddr("heartbeat"), hbServers)
-
+    heartBeatTracker.newInstance(myServer, hbServers)
     // Also InitialMulticaster
     multicaster.Initiallized(myServer, clusterMap[myServer.cluster])
 

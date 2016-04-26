@@ -1,17 +1,21 @@
 package main
 
 import (
-    "fmt"
-    "strings"
-    "html/template"
-    "io"
-    "time"
-    "crypto/md5"
-    "strconv"
-    "os"
-    "net"
-    "bufio"
-    "net/http"
+
+	"crypto/md5"
+	"fmt"
+	"html/template"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+	"net"
+	"bufio"
+	"mime/multipart"
+	"log"
+	"sync"
 )
 
 var (
@@ -31,6 +35,9 @@ var (
 	/* New */
 	master      Server
 	multicaster Mulitcaster
+	
+	/* Map lock */
+	mapLock *sync.Mutex = new(sync.Mutex)
 )
 
 type Music struct {
@@ -55,7 +62,7 @@ func (s Server) combineAddr(port string) string {
 		case "comm": return s.ip + ":" + s.comm_port
 		case "http": return s.ip + ":" + s.http_port
 		case "heartbeat": return s.ip + ":" + s.heartbeat_port
-        case "File": return s.ip + ":" + s.File_port
+        case "File": return s.ip + ":" + s.FilePort 
 	}
 	return ""
 }
@@ -161,15 +168,15 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 	        } else {
 	            // Slave will request update list to master, master will handle this request
 	            // and therefore broadcast to everyone
-	            multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.FileName})
+	            multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, handler.Filename})
 	            // mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
 	        }
 	        // File Sharding, send to different servers
-	        candidates := mList.selectServer(handler.FileName, getServerListByClusterName(myServer.cluster))
+	        candidates := mList.selectServer(handler.Filename, getServerListByClusterName(myServer.cluster))
 	        for i := range candidates {
-	            if candidates.combineAddr("File") != myServer.combineAddr("File"){
-	                clientSendFile(file, handler.FileName, candidates.combineAddr("File"))
+	            if candidates[i].combineAddr("File") != myServer.combineAddr("File"){
+	                clientSendFile(file, handler.Filename, candidates[i].combineAddr("File"))
 	            } else {
 	                // Save file to local directory if you're also one of the candidate
 	                if checkFileExist(handler.Filename){
@@ -181,7 +188,7 @@ func addfileHandler(w http.ResponseWriter, r *http.Request) {
 	                    return
 	                }
 	                io.Copy(f, file)
-	                f.close()
+	                f.Close()
 	            }
 	        }
 
@@ -273,12 +280,15 @@ func getDeadServer() {
 		// Told every slaves to update their server list
 		if master == myServer {
 			memToRemove := myServer
-			for i := range servers {
+			fmt.Println("[default memToRemove]", memToRemove)
+			for i := range clusterMap[myServer.cluster] {
+				fmt.Println("clusterMap[myServer.cluster]", clusterMap[myServer.cluster][i].combineAddr("heartbeat"))
 				if clusterMap[myServer.cluster][i].combineAddr("heartbeat") == dead {
-					memToRemove = servers[i]
+					memToRemove = clusterMap[myServer.cluster][i]
 					break
 				}
 			}
+			fmt.Println("[current list] ", clusterMap[myServer.cluster])
 			if master == memToRemove {
 				fmt.Println("Can not found dead server within the list", dead)
 				return
@@ -291,16 +301,27 @@ func getDeadServer() {
 		} else {
 			// If I'm the client which detects the master is dead
 			// Become a candidate and raise election
-
 			// raise an election
+			if dead != master.combineAddr("heartbeat") {
+				continue
+			}
 			multicaster.SendElectionMsg(master.combineAddr("comm"))
-			// Wait for others to vote for you
-			select {
-			case newMaster := <-multicaster.masterChan:
+			fmt.Println("[current List i have in slaves] ", getServerListByClusterName(myServer.cluster))
+			if len(getServerListByClusterName(myServer.cluster)) == 1 {
+				fmt.Println("I'm the only one survive in the cluster :(")
 				rmDeadServer(master)
-				UpdateMaster(newMaster)
-			case <-time.After(time.Millisecond * 500):
-				fmt.Println("time out in getting a new master")
+				UpdateMaster(myServer.name)
+			} else {
+				// Wait for others to vote for you
+				select {
+				case newMaster := <-multicaster.masterChan:
+					rmDeadServer(master)
+					UpdateMaster(newMaster)
+				case <-time.After(time.Millisecond * 1500):
+					multicaster.numVotes = 0
+	   				multicaster.voted = false
+					fmt.Println("time out in being a new master")
+				}
 			}
 		}
 
@@ -308,13 +329,19 @@ func getDeadServer() {
 }
 
 func rmDeadServer(memToRemove Server) {
+	mapLock.Lock()
 	list := clusterMap[memToRemove.cluster]
+	// fmt.Println("[Debug111]",list)
 	for i := range list {
 		if list[i] == memToRemove {
 			list = append(list[:i], list[i+1:]...)
+			clusterMap[memToRemove.cluster] = list
+			// fmt.Println("[Debug222]",list)
+			// fmt.Println("[Debug333]",clusterMap)
 			break
 		}
 	}
+	mapLock.Unlock()
 }
 
 // TODO: update the list in heartbeat and server.go
@@ -324,7 +351,7 @@ func UpdateMaster(new_master string) {
     multicaster.voted = false
     if myServer.name == new_master {
         master = myServer
-        tmpList := make([]Server, 1)
+        tmpList := make([]Server, 0)
         cServerList := getServerListByClusterName(myServer.cluster)
         for i := range cServerList {
             if cServerList[i] != master {
@@ -332,7 +359,7 @@ func UpdateMaster(new_master string) {
             }
         }
         fmt.Println("UpdateAliveList in master, now track: ", tmpList)
-        heartbeat.updateAliveList(tmpList)
+        heartBeatTracker.updateAliveList(tmpList)
     } else {
         tmpmaster := myServer
         for i := range servers {
@@ -347,30 +374,45 @@ func UpdateMaster(new_master string) {
             return
         }
         master = tmpmaster
-        tmpList := make([]Server, 1)
+        tmpList := make([]Server, 0)
         tmpList = append(tmpList, master)
-        heartbeat.updateAliveList(tmpList)
+        fmt.Println("The new master is", master.name)
+        fmt.Println("New tracking list", tmpList)
+        heartBeatTracker.updateAliveList(tmpList)
     }
 }
 
 func GetElecMsg() {
 	for {
 		eMsg := <-multicaster.elecChan
+		fmt.Println("I'm", myServer.name)
+		fmt.Println("[GetElecMsg] msg.type:", eMsg.Type)
+		fmt.Println("[GetElecMsg] msg.NewMaster: ", eMsg.NewMaster)
+		
 		switch eMsg.Type {
 		case "candidate":
-			go multicaster.SendVoteMessage(eMsg)
+			test, err  := net.Dial("tcp", master.combineAddr("heartbeat"))
+			if err == nil {
+				fmt.Println("Master is still alive")
+				test.Close()
+				break
+			}
+			if master != myServer {
+				go multicaster.SendVoteMessage(eMsg)
+			}
 		case "announce":
 			rmDeadServer(master)
 			UpdateMaster(eMsg.NewMaster)
 			fmt.Println("Somebody else is the new master!")
 		case "vote":
 			multicaster.numVotes += 1
-			if multicaster.numVotes == int((len(servers)-1)/2) {
+			fmt.Println("vote requries: ", len(clusterMap[myServer.cluster])-2, "vote I have:", multicaster.numVotes)
+			if multicaster.numVotes >= (len(clusterMap[myServer.cluster])-2) {
+				fmt.Println("I'm now the new master")
 				// Delivers message to itself
 				multicaster.masterChan <- eMsg.NewMaster
 				multicaster.RemoveMemberGlobal(master.name)
 				multicaster.SendNewMasterMsg()
-				UpdateMaster(eMsg.NewMaster)
 			}
 		case "novote":
 		}
@@ -435,10 +477,10 @@ func GetElecMsg() {
     fmt.Println("Connected to server ....")
 
     // Send action
-    connection.Write([]byte("upload\n"))
+    conn.Write([]byte("upload\n"))
     // Send file name
-    connection.Write([]byte(fileName+"\n"))
-    msg, _ := bufio.NewReader(connection).ReadString('\n')
+    conn.Write([]byte(fileName+"\n"))
+    msg, _ := bufio.NewReader(conn).ReadString('\n')
     // if already exists
     if strings.Compare(msg, "success\n") != 0{
         fmt.Println("msg: ", msg)
@@ -447,8 +489,8 @@ func GetElecMsg() {
     }
 
     var n int64
-    n, err = io.Copy(connection, sf)
-    connection.Close()
+    n, err = io.Copy(conn, sf)
+    conn.Close()
     if err != nil {
         log.Fatal(err)
     }
@@ -458,7 +500,6 @@ func GetElecMsg() {
 /* File Transfer port Listener */
 
 func FileListener() {
-    var port string = "9999"
 
     fmt.Println("Launching File Listener Port")
     listen, err := net.Listen("tcp", ":"+myServer.FilePort)
@@ -580,11 +621,11 @@ func main() {
 	readGroupConfig()
 	readMusicConfig()
 	
-	// InitialHeartBeat(master)
-	// go getDeadServer()
-    // go GetElecMsg()
-    // go FileListener()
-	go listeningMsg()
+	InitialHeartBeat(master)
+	go getDeadServer()
+    go GetElecMsg()
+    go FileListener()
+	// listeningMsg()
 	startHTTP()
 }
 
