@@ -70,7 +70,7 @@ func (this *MusicList) selectServer(fileName string, candidates []Server) []Serv
 func (this *MusicList) add(fileName string) {
 	this.lock.Lock()
 	this.fileList[fileName] = true
-	this.orderList[this.NumFiles] = fileName
+	//this.orderList[this.NumFiles] = fileName
 	this.NumFiles=this.NumFiles + 1
 	//fmt.Println()
 	this.lock.Unlock()
@@ -86,6 +86,13 @@ func (this *MusicList) Update(fileName string, position int){
 
 func (this *MusicList) Delete(fileName string){
 	
+}
+
+func (this *MusicList) delete(fileName string){
+	this.lock.Lock()
+	delete(this.fileList, fileName)
+	this.NumFiles=this.NumFiles - 1
+	this.lock.Unlock()
 }
 
 func (this *MusicList) request(fileName string, addr string) bool{

@@ -6,98 +6,100 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 <!DOCTYPE HTML>
 <html>
 <head>
-<title>Join a Group</title>
-<link href="css/bootstrap.css" rel="stylesheet" type="text/css" media="all">
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-<script src="js/jquery-1.11.0.min.js"></script>
-<!-- Custom Theme files -->
-<link href="css/style.css" rel="stylesheet" type="text/css" media="all"/>
-<!-- Custom Theme files -->
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="keywords" content="DS-team12" />
-<script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false); function hideURLbar(){ window.scrollTo(0,1); } </script>
-<!--Google Fonts-->
-<!-- start-smoth-scrolling -->
-<script type="text/javascript" src="js/move-top.js"></script>
-<script type="text/javascript" src="js/easing.js"></script>
+	<title>Join a Group</title>
+	<link href="css/bootstrap.css" rel="stylesheet" type="text/css" media="all">
+	<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+	<script src="js/jquery-1.11.0.min.js"></script>
+	<!-- Custom Theme files -->
+	<link href="css/style.css" rel="stylesheet" type="text/css" media="all"/>
+	<!-- Custom Theme files -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="keywords" content="DS-team12" />
+	<script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false); function hideURLbar(){ window.scrollTo(0,1); } </script>
+	<!--Google Fonts-->
+	<!-- start-smoth-scrolling -->
+	<script type="text/javascript" src="js/move-top.js"></script>
+	<script type="text/javascript" src="js/easing.js"></script>
 	<script type="text/javascript">
-			jQuery(document).ready(function($) {
-				$(".scroll").click(function(event){		
-					event.preventDefault();
-					$('html,body').animate({scrollTop:$(this.hash).offset().top},1000);
-				});
-			});
-	</script>
-<!-- //end-smoth-scrolling -->
-<script src="js/menu_jquery.js"></script>
-<!--script-->
-	<script src="js/modernizr.custom.97074.js"></script>
-<script src="js/jquery.chocolat.js"></script>
-		<link rel="stylesheet" href="css/chocolat.css" type="text/css" media="screen" charset="utf-8">
-		<!--light-box-files -->
-		<script type="text/javascript" charset="utf-8">
-		$(function() {
-			$('.gallery a').Chocolat();
+	jQuery(document).ready(function($) {
+		$(".scroll").click(function(event){		
+			event.preventDefault();
+			$('html,body').animate({scrollTop:$(this.hash).offset().top},1000);
 		});
-		</script>
-		<script type="text/javascript" src="js/jquery.hoverdir.js"></script>
+	});
+	</script>
+	<!-- //end-smoth-scrolling -->
+	<script src="js/menu_jquery.js"></script>
+	<!--script-->
+	<script src="js/modernizr.custom.97074.js"></script>
+<!--<script src="js/jquery.chocolat.js"></script>
+	<link rel="stylesheet" href="css/chocolat.css" type="text/css" media="screen" charset="utf-8"> -->
+
+	<!--light-box-files -->
+	<script type="text/javascript" src="js/jquery.hoverdir.js"></script>
 
 </head>
 <body>
-<!--header start here-->
-<div class="header1">
-	<div class="container">
-		 <div class="header-main">
+	<!--header start here-->
+	<div class="header1">
+		<div class="container">
+			<div class="header-main">
 				<!---->
-					<div class="header-logo">
-						<div class="logo">
+				<div class="header-logo">
+					<div class="logo">
 						<a href="index.html"><img src="images/lo1.png" alt="" ></a>
-						</div>
-						<div class="top-nav">
-							<span class="icon"><img src="images/menu.png" alt=""> </span>
-							<ul>
-								<li ><a href="index.html">Home</a> </li>
-								<li ><a href="about.html" >About  </a> </li>
-								<li><a href="group.html" >Group</a></li>
-								<li><a href="contact.html" >Contact </a></li>
-							</ul>
-							<!--script-->
-						<script>
-							$("span.icon").click(function(){
-								$(".top-nav ul").slideToggle(500, function(){
-								});
-							});
-					</script>				
-				</div>
-				<div class="clearfix"> </div>
 					</div>
-			<!---->
-			<div class="top-menu">					
+					<div class="top-nav">
+						<span class="icon"><img src="images/menu.png" alt=""> </span>
+						<ul>
+							<li ><a href="index.html">Home</a> </li>
+							<li ><a href="about.html" >About  </a> </li>
+							<li><a href="group.html" >Group</a></li>
+							<li><a href="contact.html" >Contact </a></li>
+						</ul>
+						<!--script-->
+						<script>
+						$("span.icon").click(function(){
+							$(".top-nav ul").slideToggle(500, function(){
+							});
+						});
+						</script>				
+					</div>
+					<div class="clearfix"> </div>
+				</div>
+				<!---->
+				<div class="top-menu">					
 					<ul>
 						<li ><a href="index.html" >Home</a> </li>
 						<li ><a href="about.html">About  </a> </li>
 						<li><a href="index.html"> <img src="images/lo1.jpg" alt=""> </a></li>
-						<li><a href="group.html">Group </a></li>
+						<li><a href="join.html">Group </a></li>
 						<li><a href="contact.html">Contact</a></li>
 					</ul>
 				</div>
-					<!--script-->
-	 </div>
-   </div>
-</div>
-<!--header end here-->
-<!--gallery-starts-->
+				<!--script-->
+			</div>
+		</div>
+	</div>
+	<!--header end here-->
+<script type="text/javascript">
+	function DoPost(){
+		$.post("join.html", {groupname: "hello"})
+	}
+</script>
+
+	<!--gallery-starts-->
 	<div class="gallery">
 		<div class="container">
 			<div class="gallery-top heading">
-				<h2>Groups</h2>
-				<p>Choose a group that you like</p>
+				<h2>Music Groups</h2>
+				<p>Choose a music group you like</p>
 			</div>
 			<section>
 				<ul id="da-thumbs" class="da-thumbs">
 					<li>
-						<a href="index.html" rel="title" class="b-link-stripe b-animate-go  thickbox">
+						<a href="javascript:DoPost()">
 							<img src="images/g1.jpg" alt="" class="img-responsive">
 							<div>
 								<h5>Tom's Jazz</h5>
@@ -107,6 +109,9 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 					</li>
 					<li>
 						<a href="images/g2.jpg" rel="title" class="b-link-stripe b-animate-go  thickbox">
+							<form action="join.html" methode="post">
+								<input type="hidden" name="groupname" value="hello">
+							</form>
 							<img src="images/g2.jpg" alt="">
 							<div>
 								<h5>Lily's soft music</h5>
@@ -180,16 +185,16 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 					<div class="clearfix"> </div>
 				</ul>
 			</section>
-				
-		<script type="text/javascript">
+
+			<script type="text/javascript">
 			$(function() {
-			
+
 				$(' #da-thumbs > li ').each( function() { $(this).hoverdir(); } );
 
 			});
-		</script>
-        </div>
+			</script>
+		</div>
 	</div>
-<!--gallery-end-->
+	<!--gallery-end-->
 </body>
 </html>

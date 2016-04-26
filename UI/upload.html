@@ -186,7 +186,7 @@ $(function() {
         </div>
       </div>
 
-      <div class="single-bottom">
+      <div class="single-bottom" >
         <h3>Add a Music</h3>
         <form enctype="multipart/form-data" action="upload.html" method="post">
           <div class="col-md-6 comment">
@@ -195,12 +195,14 @@ $(function() {
              <input type="hidden" name="type" value="addfile"/>
             <input type="hidden" name="token" value="{{.}}"/>
           </div>
-          <div class="contact-form">
+          <div class="single-bottom">
             <input type="submit" value="Add">
           </div>  
         </form>     
       </div>
 
+
+      <!---->
 
       <div class="single-bottom">
         <h3>Delete a Music</h3>
@@ -208,13 +210,21 @@ $(function() {
           <div class="col-md-6 comment">
             <input type="hidden" name="groupname" value="{{.GroupName}}"/>
              <input type="hidden" name="type" value="deletefile"/>
-            <input type="text" placeholder="file name" name="deletefile" required=""/>
+             <select name="music">
+              {{range $key, $value := .FilesMap}}
+                <option value="{{$key}}">{{$key}}</option>
+              {{end}}
+             </select> 
+            <!--<input type="text" placeholder="file name" name="deletefile" required=""/>-->
           </div>
-          <div class="contact-form">
+          <div class="single-bottom">
             <input type="submit" value="Delete">
           </div>  
         </form>     
       </div>
+
+
+
 
     </div>
 
@@ -222,10 +232,12 @@ $(function() {
     <div class="col-md-3 categories-grid">
       <div class="grid-categories">
         <h4>{{.GroupName}}</h4>
-        <ul class="popular sortable" style="position:absolute; height:270px; width:100%; overflow:auto">
+        <ul class="popular" style="position:absolute; height:270px; width:100%; overflow:auto">
           {{range $key, $value := .FilesMap}}
-          <li class="list" id="{{$key}}"> <action href="#"><i class="glyphicon glyphicon-ok"></i> {{$key}}</a> </li>
+          <li> <a href="#"><i class="glyphicon glyphicon-ok"></i>{{$key}}</a> </li>
           {{end}}
+          <!--<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music D</a></li>
+          <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>-->
         </ul>
       </div>
     </div>

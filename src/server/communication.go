@@ -6,13 +6,6 @@ import(
     "net"
 )
 
-//type Message struct{
-//	Dst string
-//	Src string
-//	Kind string
-//	Data string	
-//}
-
 func sendOneMsg(dest string, src string, kind string, data string) {
 	//fmt.Println("start client");
 	msg := &Message{dest, src, kind, data, ListContent{}, ElectionMsg{}}
@@ -34,12 +27,11 @@ func sendOneMsg(dest string, src string, kind string, data string) {
     	}
 	}*/
     conn.Close()
-   // fmt.Println(groups);
 }
 
 func whichCluster(ip string) string {
 	for i := range servers {
-		if servers[i].combineAddr("comm") == ip {
+		if servers[i].combineAddr("backup") == ip {
 			return servers[i].cluster
 		}
 	}
@@ -88,8 +80,8 @@ func requestHandler(conn net.Conn) {
 }
 
 func listeningMsg() {
-	fmt.Println("[init] communication at port", myServer.comm_port)
-	socket, err := net.Listen("tcp", myServer.combineAddr("comm"))
+	fmt.Println("[init] communication at port", myServer.backup_port)
+	socket, err := net.Listen("tcp", myServer.combineAddr("backup"))
   	if err != nil { 
   		fmt.Println("tcp listen error") 
   	} 
@@ -103,12 +95,10 @@ func listeningMsg() {
 }
 
 func multicastServers(data string, kind string) {
-	//serverList := clusterMap[myServer.cluster]
-	//fmt.Println("multicast",clusterMap)
 	for i := range servers{ 
 		if servers[i] != myServer{
 			//fmt.Println("[debug]multicast",servers[i].comm_port)
-			sendOneMsg(servers[i].combineAddr("comm"), myServer.combineAddr("comm"), kind, data)
+			sendOneMsg(servers[i].combineAddr("backup"), myServer.combineAddr("backup"), kind, data)
 		}
 	}
 }

@@ -86,10 +86,12 @@ func readServerConfig(){ //clear
 		if err == io.EOF {
 	    	break
 		} else if err != nil {
-			fmt.Println("[init] Error!!!!!!!!!!: ", err)
+			fmt.Println("[init] Error", err)
 			return
 		}
-		newServer :=  Server{record[1], record[0],record[2], record[3], record[4], record[5], -1, record[8]} //ip, comm, http, heartbeat, cluster
+		
+		//                     ip,     serverName,   comm,     http,    heartbeat, cluster, HB Freq, FilePort,  backup Port
+		newServer :=  Server{record[1], record[0],record[2], record[3], record[4], record[5], -1, record[8], record[9]} 
 		i, err := strconv.Atoi(record[7])
 		if err != nil {
 			fmt.Println("error in parsing heart beat freq to integer")
