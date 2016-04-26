@@ -15,7 +15,8 @@ func sendOneMsg(dest string, src string, kind string, data string) {
     }
     encoder := gob.NewEncoder(conn)
     encoder.Encode(msg)
-   
+    
+    
     /*connbuf := bufio.NewReader(conn)
 	for{
     	str, err := connbuf.ReadString('\n')

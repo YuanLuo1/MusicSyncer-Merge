@@ -24,7 +24,7 @@ type HeartBeat struct {
 	timeStamps map[string]time.Time
 	deadChannel chan string
 	lock *sync.Mutex
-	
+	first bool
 	serverHBFreq []int
 }
 
@@ -47,7 +47,7 @@ func (this *HeartBeat) newInstance(host Server, connect_servers []Server){
 	this.lock = new(sync.Mutex)
 	this.deadChannel = make(chan string)
 	this.updateAliveList(connect_servers)
-	
+	this.first = true
 	go this.recvAliveMsg()
 	if this.host != master {
 		// Slave send hb to master to trigger connection
@@ -58,6 +58,7 @@ func (this *HeartBeat) newInstance(host Server, connect_servers []Server){
 
 func (this *HeartBeat) updateAliveList(connect_servers []Server){
 	this.lock.Lock()
+	fmt.Println("[updateAliveList] ", connect_servers)
 	this.serverHBFreq = make([]int, len(connect_servers))
 	this.track_server = make([]string, len(connect_servers))
 	this.track_server_addr = make([]*net.UDPAddr, len(connect_servers))
@@ -78,7 +79,14 @@ func (this *HeartBeat) updateAliveList(connect_servers []Server){
 			this.serverHBFreq[idx] = server.heartbeatFreq
 		}
 	}
+	fmt.Println()
 	this.timeStamps = make(map[string]time.Time)
+	
+	if this.first == true && this.host.combineAddr("heartbeat") != master.combineAddr("heartbeat"){
+		// Slave send hb to master to trigger connection
+		this.timeStamps[master.combineAddr("heartbeat")] = time.Now()
+		go this.sendAliveMsg()
+	}
 	this.lock.Unlock()
 }
 
@@ -144,6 +152,7 @@ func (this *HeartBeat) startTicker(freq int, connServer string, connServerAddr *
 					}
 				}
 				this.deadChannel <- server
+				this.lock.Unlock()
 				return
 			}
 			this.lock.Unlock()

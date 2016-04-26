@@ -135,7 +135,6 @@ func InitialHeartBeat(master Server){
     fmt.Println("[init-heartbeat]",hbServers)
     
     heartBeatTracker.newInstance(myServer, hbServers)
-
     // Also InitialMulticaster
     multicaster.Initiallized(myServer, clusterMap[myServer.cluster])
 

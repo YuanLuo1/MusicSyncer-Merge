@@ -18,13 +18,16 @@ func isGroupHere(groupName string) bool {
 }
 
 func getServerListByClusterName(clusterName string) []Server {
+	mapLock.Lock()
 	newList := clusterMap[clusterName]
-	list := make([]Server, len(newList)-1)
+	fmt.Println(newList)
+	list := make([]Server, 0)
 	for i:= range newList {
-		if newList[i] != myServer {
+		if newList[i].name != myServer.name {
 			list = append(list, newList[i])
 		}
 	}
+	mapLock.Unlock()
 	return list
 }
 
