@@ -87,11 +87,6 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		if !isGroupNameExist(groupName) {
 			createNewGroupLocal(groupName, myServer.cluster) //local
 			
-			//multicastServers(groupName, "create_group") //check group type
-
-			data := Music{GroupName: groupName}
-			data.FilesMap = make(map[string]string)
-			
 			// Send a request to every server to request create new server
 			if myServer == master {
 				fmt.Println("I'm a master and multicasting a  update to every slave")
@@ -99,10 +94,9 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fmt.Println("I'm a slave and sending a request update to master")
 				go multicaster.RequestUpdateList(ListContent{groupName, "create", -1, ""})
-			}		
+			}	
 			
-			t, _ := template.ParseFiles("UI/upload.html")
-			t.Execute(w, data)
+			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 		} else {
 			w.Write([]byte("Create Group failed, please try another groupname or check servers alive"))
 		}
@@ -127,10 +121,8 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 				for key, _ := range mList.fileList {
 					data.FilesMap[key] = "test/" + key
 				}
-				fmt.Println("[debuggggggg]", data)
 				t, _ := template.ParseFiles("UI/upload.html")
-				t.Execute(w, data)
-				
+				t.Execute(w, data)				
 			} else {
 				redirectToCorrectServer(groupName, w, r) 
 			}
@@ -182,7 +174,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("MList: ", mList)
 			//mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
-			//afterReceiveFile(handler.Filename, mList, file)
+			afterReceiveFile(handler.Filename, mList, file)
 			f, err := os.OpenFile("./test/"+ handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 			if err != nil {
 				fmt.Println(err)
@@ -191,15 +183,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			io.Copy(f, file)
 			f.Close()
 			
-			data := Music{GroupName: groupName}
-			data.FilesMap = make(map[string]string)
-			fmt.Println("[debug]", handler.Filename)
-			for key, _ := range mList.fileList {
-				data.FilesMap[key] = "test/" + key
-			}
-			t, _ := template.ParseFiles("UI/upload.html")
-			t.Execute(w, data)
-
+			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 		} else if r.FormValue("type") == "deletefile" {
 			//TODO: delete file
 			groupName := strings.TrimSpace(r.FormValue("groupname"))

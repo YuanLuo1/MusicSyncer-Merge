@@ -6,6 +6,7 @@ import (
     "os"
     "encoding/csv"
     "strconv"
+    //"net/http"
 )
 
 func readMusicConfig(){ //clear
@@ -73,6 +74,7 @@ func readGroupConfig(){ //clear
 func readServerConfig(){ //clear
 	clusterMap = make(map[string][]Server)
 	masterServer = make(map[string]Server)
+	//file, err:= os.Open("https://s3.amazonaws.com/ds-rujia/initServers.csv")
 	file, err:= os.Open("./initServers.csv")
 	if err != nil {
 		fmt.Println("[init] Error: ", err)
