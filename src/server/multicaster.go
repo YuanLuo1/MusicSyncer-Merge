@@ -190,6 +190,8 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 	// Request message from 
 	numVote := len(this.members)
 	numRcv := 0
+	fmt.Println("[Updatelist] numvote needed", numVote)
+	fmt.Println("[UpdateList] members", this.members)
 	for i:=0; i<numVote-1; i++ {
 		select {
 			case <- this.ackChans[content.ListName]:
@@ -253,11 +255,11 @@ func (this *Mulitcaster) RemoveMemberLocal(memberName string){
 	fmt.Println("Remove member in local", memberName)
 	for i := range servers {
 		if servers[i].combineAddr("comm") == memberName {
+			delete(this.members, servers[i].name)
 			rmDeadServer(servers[i])
 			break		
 		}
 	}
-	delete(this.members, memberName)
 }
 
 // Return true if success, else return false. Only for master
