@@ -682,6 +682,13 @@ func main() {
 	fmt.Scan(&i)
 	myServer = servers[i]
 	master = masterServer[myServer.cluster]
+	
+	// Create a folder for server to use
+	err := os.Mkdir("test",0711)
+ 	if err != nil {
+    	fmt.Println("Error creating directory")
+    	fmt.Println(err)
+ 	}
 
 	// Directory = "./" + myServer.name + "/"
 	Directory = "./test/"
