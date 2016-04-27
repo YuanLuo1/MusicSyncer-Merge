@@ -5,3 +5,4 @@ test.go
 src/github.com/*
 src/golang.org/*
 .settings/*
+*/test/*

@@ -1,0 +1,22 @@
+
+func redirectToCorrectSession(sessionName string, w http.ResponseWriter, r *http.Request) bool {
+	desiredGroupId := getGroupId(sessionName)
+	desiredGroup := configuration.Groups[desiredGroupId]
+
+	if desiredGroupId != groupId {
+		// Redirect session request to the appropriate server.
+		//fmt.Println("Redirecting request to the appropriate group: ", desiredGroupId)
+		for _, s := range configuration.Servers {
+			if s.Group == desiredGroup.Name {
+				newURL := "https://" + s.IP + ":" + s.HttpPort // + r.URL.Path
+				//fmt.Println("\tRedirecting to ", newURL)
+				fmt.Fprintf(w, newURL)
+				return true
+			}
+		}
+		// Ideally, we should have redirected already, but this prevents falling
+		// through and executing on the wrong group.
+		return true
+	}
+	return false
+}

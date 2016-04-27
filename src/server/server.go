@@ -60,7 +60,7 @@ type Server struct {
 	backup_port    string
 }
 
-func (s Server) combineAddr(port string) string {
+func (s *Server) combineAddr(port string) string {
 	switch port {
 	case "comm":
 		return s.ip + ":" + s.comm_port
@@ -85,6 +85,7 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		groupName := r.PostFormValue("groupname")
 		fmt.Println("[debug]", groupName)
 		if !isGroupNameExist(groupName) {
+
 			createNewGroupLocal(groupName, myServer.cluster) //local
 			
 			// Send a request to every server to request create new server
@@ -163,18 +164,17 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Println(err)
 				return
 			}
-			// defer file.Close()
+			defer file.Close()
 			fmt.Println("[upload] file name: ", handler.Filename)
 			fmt.Println("[upload] group name: ", groupName)
 
-			//TODO: check
 			mList := getMusicList(groupName)
 
 			mList.add(handler.Filename)
 			fmt.Println("MList: ", mList)
 			//mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
-			afterReceiveFile(handler.Filename, mList, file)
+			afterReceiveFile(handler.Filename, mList, file, "add")
 			f, err := os.OpenFile("./test/"+ handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 			if err != nil {
 				fmt.Println(err)
@@ -193,8 +193,9 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			mList := getMusicList(groupName)
 			mList.delete(deleteMusic) //TODO: only delete local
 			
-			
 			fmt.Println("MList: ", mList)
+			
+			afterReceiveFile(deleteMusic, mList, nil, "delete")
 			
 			data := Music{GroupName: groupName}
 			data.FilesMap = make(map[string]string)
@@ -209,26 +210,36 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func afterReceiveFile(fileName string, mList *MusicList, file multipart.File) {
+func afterReceiveFile(fileName string, mList *MusicList, file multipart.File, tp string) {
 	// If Master, Simply broadcast to everyone
 	if myServer == master {
-		multicaster.UpdateList(ListContent{mList.name, "add", -1, fileName})
+		multicaster.UpdateList(ListContent{mList.name, tp, -1, fileName})
 		// TODO: file sharding and send file to others
 	} else {
 		// Slave will request update list to master, master will handle this request
 		// and therefore broadcast to everyone
-		multicaster.RequestUpdateList(ListContent{mList.name, "add", -1, fileName})
+		multicaster.RequestUpdateList(ListContent{mList.name, tp, -1, fileName})
 		// mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
 	}
+	
+	// Transfer file
+	// fileTransfer(fileName, mList, file)
+	
+	fmt.Println("Upload success")
+}
+
+func fileTransfer(fileName string, mList *MusicList, file multipart.File) {
 	// File Sharding, send to different servers
-	candidates := mList.selectServer(fileName, getServerListByClusterName(myServer.cluster))
+	// candidates := mList.selectServer(fileName, getServerListByClusterName(myServer.cluster))
+	candidates := clusterMap[myServer.cluster]
 	for i := range candidates {
 		if candidates[i].combineAddr("File") != myServer.combineAddr("File") {
 			clientSendFile(file, fileName, candidates[i].combineAddr("File"))
 		} else {
 			// Save file to local directory if you're also one of the candidate
 			if checkFileExist(fileName) {
+				fmt.Println("File already exists")
 				continue
 			}
 			f, err := os.OpenFile("./test/"+fileName, os.O_WRONLY|os.O_CREATE, 0666)
@@ -240,8 +251,6 @@ func afterReceiveFile(fileName string, mList *MusicList, file multipart.File) {
 			f.Close()
 		}
 	}
-
-	fmt.Println("Upload success")
 }
 
 // Delivers message from multicaster's message chan
@@ -249,14 +258,18 @@ func DeliverMessage(listName string) {
 	msgChan := multicaster.GetMsgChans(listName)
 	for {
 		listcontent := <-msgChan
+		fmt.Println("recv action type ", listcontent.Type)
 		switch listcontent.Type {
 		case "add":
+			// Transfer file
+			// fileTransfer(listcontent.File , mList, file)
 			mList := getMusicList(listcontent.ListName)
 			mList.add(listcontent.File)
 		case "delete":
 			mList := getMusicList(listcontent.ListName)
-			mList.add(listcontent.File)
-
+			mList.delete(listcontent.File)
+		case "create":
+			createNewGroupLocal(listcontent.ListName, myServer.cluster) //local
 		case "update":
 		}
 	}
