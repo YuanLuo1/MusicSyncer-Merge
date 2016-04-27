@@ -85,8 +85,8 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		groupName := r.PostFormValue("groupname")
 		fmt.Println("[debug]", groupName)
 		if !isGroupNameExist(groupName) {
-						
-			//multicastServers(groupName, "create_group") //check group type
+
+			createNewGroupLocal(groupName, myServer.cluster) //local
 			
 			// Send a request to every server to request create new server
 			if myServer == master {
@@ -95,12 +95,9 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				fmt.Println("I'm a slave and sending a request update to master")
 				go multicaster.RequestUpdateList(ListContent{groupName, "create", -1, ""})
-			}		
+			}	
 			
-			data := Music{GroupName: groupName}
-			data.FilesMap = make(map[string]string)
-			t, _ := template.ParseFiles("UI/upload.html")
-			t.Execute(w, data)
+			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 		} else {
 			w.Write([]byte("Create Group failed, please try another groupname or check servers alive"))
 		}
@@ -125,10 +122,8 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 				for key, _ := range mList.fileList {
 					data.FilesMap[key] = "test/" + key
 				}
-				fmt.Println("[debuggggggg]", data)
 				t, _ := template.ParseFiles("UI/upload.html")
-				t.Execute(w, data)
-				
+				t.Execute(w, data)				
 			} else {
 				redirectToCorrectServer(groupName, w, r) 
 			}
@@ -188,15 +183,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			io.Copy(f, file)
 			f.Close()
 			
-			data := Music{GroupName: groupName}
-			data.FilesMap = make(map[string]string)
-			fmt.Println("[debug]", handler.Filename)
-			for key, _ := range mList.fileList {
-				data.FilesMap[key] = "test/" + key
-			}
-			t, _ := template.ParseFiles("UI/upload.html")
-			t.Execute(w, data)
-
+			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 		} else if r.FormValue("type") == "deletefile" {
 			//TODO: delete file
 			groupName := strings.TrimSpace(r.FormValue("groupname"))
