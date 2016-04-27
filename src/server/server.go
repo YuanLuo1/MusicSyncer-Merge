@@ -196,14 +196,7 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("MList: ", mList)
 			
 			afterReceiveFile(deleteMusic, mList, nil, "delete")
-			
-			data := Music{GroupName: groupName}
-			data.FilesMap = make(map[string]string)
-			for key, _ := range mList.fileList {
-				data.FilesMap[key] = "test/" + key
-			}
-			t, _ := template.ParseFiles("UI/upload.html")
-			t.Execute(w, data)
+			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 			
 		}
 
