@@ -85,6 +85,9 @@ func (this *RPCRecver) Communicate (msg Message, reply *string) error{
 				*reply = "success"
 				// rcv commit message from master, delivers
 				this.rcvMedia.msgChans[msg.ListInfo.ListName] <- msg.ListInfo
+				if msg.ListInfo.Type == "create" {
+					go DeliverMessage(msg.ListInfo.ListName)
+				}
 				fmt.Println("Deliver msg success")
 			case <- time.After(time.Second * 1):
 				if msg.ListInfo.Type == "create" {
@@ -158,7 +161,8 @@ func (this *Mulitcaster) lisenter(server Server){
 
 /* Slave request master to modify the music list */
 func (this *Mulitcaster) RequestUpdateList(content ListContent) {
-	msg := Message{master.combineAddr("comm_port"), this.myInfo.combineAddr("comm_port"), "requestupdate", "", content, ElectionMsg{}}
+	fmt.Println("request update, sending message to", master.combineAddr("comm"))
+	msg := Message{master.combineAddr("comm"), this.myInfo.combineAddr("comm"), "requestupdate", "", content, ElectionMsg{}}
 	go this.SendMsg(msg)
 }
 
@@ -216,6 +220,10 @@ func (this *Mulitcaster) UpdateList(content ListContent) bool {
 	fmt.Println(msg.ListInfo)
 	this.msgChans[content.ListName] <- msg.ListInfo
 	fmt.Println("finish delivers message to myself")
+	
+	if msg.ListInfo.Type == "create" {
+		go DeliverMessage(msg.ListInfo.ListName)
+	}
 	return true
 }
 
@@ -306,10 +314,10 @@ func (this *Mulitcaster) SendVoteMessage(msg ElectionMsg) {
 	tmsg := Message{}
 	if this.voted == true {
 		fmt.Println("[Leader Election] Already voted")
-		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm_port"), "election", "", ListContent{}, ElectionMsg{"novote", msg.NewMaster}}
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm"), "election", "", ListContent{}, ElectionMsg{"novote", msg.NewMaster}}
 	} else {
 		fmt.Println("[Leader Election] I will vote for ", msg.NewMaster)
-		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm_port"), "election", "", ListContent{}, ElectionMsg{"vote", msg.NewMaster}}
+		tmsg = Message{this.members[msg.NewMaster], this.myInfo.combineAddr("comm"), "election", "", ListContent{}, ElectionMsg{"vote", msg.NewMaster}}
 		this.voted = true
 	}
 	go this.SendMsg(tmsg)

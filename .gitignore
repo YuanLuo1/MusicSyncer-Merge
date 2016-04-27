@@ -3,10 +3,7 @@ bin/*
 test.go
 .DS_Store
 
-<<<<<<< HEAD
->>>>>>> 7e903e86953c74a3969cc9e37d17724b64c456bd
 src/github.com/*
 src/golang.org/*
 .settings/*
-=======
->>>>>>> 1abac745f69bc2f8f6d40a951ad632c6dcf42e54
+*/test/*
