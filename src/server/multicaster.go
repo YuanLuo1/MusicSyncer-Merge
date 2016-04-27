@@ -254,7 +254,7 @@ func (this *Mulitcaster) SendMsg(msg Message) {
 func (this *Mulitcaster) RemoveMemberLocal(memberName string){
 	fmt.Println("Remove member in local", memberName)
 	for i := range servers {
-		if servers[i].combineAddr("comm") == memberName {
+		if servers[i].combineAddr("comm") == memberName || servers[i].name == memberName{
 			delete(this.members, servers[i].name)
 			rmDeadServer(servers[i])
 			break		
@@ -264,6 +264,7 @@ func (this *Mulitcaster) RemoveMemberLocal(memberName string){
 
 // Return true if success, else return false. Only for master
 func (this *Mulitcaster) RemoveMemberGlobal(memberName string) bool{
+	fmt.Println("[RemoveMemberGlobal] memberName", memberName)
 	this.RemoveMemberLocal(memberName)
 	msg := Message{"", this.myInfo.combineAddr("comm"), "remMem", memberName, ListContent{}, ElectionMsg{}}
 	for key := range this.members{
