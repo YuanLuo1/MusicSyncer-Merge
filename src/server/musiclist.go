@@ -11,9 +11,6 @@ import (
 	"math"
 )
 
-const (
-	DIRECTORY = "./test/"
-)
 
 type MusicList struct {
 	name string
@@ -24,7 +21,7 @@ type MusicList struct {
 }
 
 func checkFileExist(fileName string) bool{
-	fileName = "./test/" + fileName
+	fileName = Directory + fileName
 	if _, err := os.Stat(fileName); err == nil{
 		return true
 	}
@@ -121,7 +118,7 @@ func (this *MusicList) request(fileName string, addr string) bool{
 
 	var receivedBytes int64
 	// reader := bufio.NewReader(conn)
-	f, err := os.Create(DIRECTORY + fileName)
+	f, err := os.Create(Directory + fileName)
 	defer f.Close()
 	if err != nil {
 		conn.Close()

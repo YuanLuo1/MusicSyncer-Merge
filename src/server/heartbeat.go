@@ -169,38 +169,3 @@ func (this *HeartBeat) sendAliveMsg(){
 func (this *HeartBeat) GetDeadChannel() chan string{
 	return this.deadChannel
 }
-
-// Test
-/*func main() {
-	master_addr := "127.0.0.1:10001"
-	slave1_addr := "127.0.0.1:10002"
-	slave2_addr := "127.0.0.1:10003"
-		
-	master_addrs := []string{master_addr}
-	slave_addrs := []string{slave1_addr, slave2_addr}
-	master_heartbeat := new(HeartBeat)
-	master_heartbeat.newInstance(master_addr, slave_addrs)
-	slave1_heartbeat := new(HeartBeat)
-	slave1_heartbeat.newInstance(slave1_addr, master_addrs)
-	// remove slave2_heartbeat to test dead function
-	// slave2_heartbeat := new(Heartbeat)
-	// slave2_heartbeat.Initialize(slave2_addr, master_addrs, master_addrs)
-
-	// need receive at least one notification (packet) to start detection
-	time.Sleep(time.Second * 3)
-	master_udpaddr, err := net.ResolveUDPAddr("udp", master_addr)
-	checkErr(err)
-	slave2_udpaddr, err := net.ResolveUDPAddr("udp", slave2_addr)
-	checkErr(err)
-	socket2, err := net.ListenUDP("udp", slave2_udpaddr)
-	checkErr(err)
-	socket2.WriteToUDP([]byte(slave2_addr), master_udpaddr)
-	
-	deadChan := master_heartbeat.GetDeadChannel()
-	for {
-		dead := <-deadChan
-		fmt.Println(dead)
-		updated_slave_addrs := []string{slave1_addr}
-		master_heartbeat.updateAliveList(updated_slave_addrs)
-	}
-}*/

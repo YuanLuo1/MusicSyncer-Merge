@@ -7,3 +7,4 @@ src/golang.org/*
 .settings/*
 *./test/*
 test/*
+server*

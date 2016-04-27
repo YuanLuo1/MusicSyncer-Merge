@@ -37,6 +37,8 @@ var (
 	
 	/* Map lock */
 	mapLock *sync.Mutex = new(sync.Mutex)
+	
+	Directory string
 )
 
 type Music struct {
@@ -120,7 +122,7 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 				data := Music{GroupName: groupName}
 				data.FilesMap = make(map[string]string)
 				for key, _ := range mList.fileList {
-					data.FilesMap[key] = "test/" + key
+					data.FilesMap[key] = Directory + key
 				}
 				t, _ := template.ParseFiles("UI/upload.html")
 				t.Execute(w, data)				
@@ -174,14 +176,15 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("MList: ", mList)
 			//mList.Add(handler.Filename, getServerListByClusterName(myServer.cluster))
 
-			afterReceiveFile(handler.Filename, mList, file, "add")
-			f, err := os.OpenFile("./test/"+ handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+			f, err := os.OpenFile(Directory + handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 			io.Copy(f, file)
 			f.Close()
+
+			afterReceiveFile(handler.Filename, mList, file, "add")
 			
 			http.Redirect(w, r, "http://"+myServer.combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 		} else if r.FormValue("type") == "deletefile" {
@@ -217,8 +220,9 @@ func afterReceiveFile(fileName string, mList *MusicList, file multipart.File, tp
 	}
 	
 	// Transfer file
-	// fileTransfer(fileName, mList, file)
-	
+	if tp == "add" {
+		fileTransfer(fileName, mList, file)
+	}
 	fmt.Println("Upload success")
 }
 
@@ -226,23 +230,28 @@ func fileTransfer(fileName string, mList *MusicList, file multipart.File) {
 	// File Sharding, send to different servers
 	// candidates := mList.selectServer(fileName, getServerListByClusterName(myServer.cluster))
 	candidates := clusterMap[myServer.cluster]
+//	fileLock := new(sync.Mutex)
 	for i := range candidates {
+//		fileLock.Lock()
+//		tmpFile := file
+//		fileLock.Unlock()
 		if candidates[i].combineAddr("File") != myServer.combineAddr("File") {
-			clientSendFile(file, fileName, candidates[i].combineAddr("File"))
-		} else {
-			// Save file to local directory if you're also one of the candidate
-			if checkFileExist(fileName) {
-				fmt.Println("File already exists")
-				continue
-			}
-			f, err := os.OpenFile("./test/"+fileName, os.O_WRONLY|os.O_CREATE, 0666)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			io.Copy(f, file)
-			f.Close()
+			go clientSendFile(fileName, candidates[i].combineAddr("File"))
 		}
+//		} else {
+//			// Save file to local directory if you're also one of the candidate
+//			if checkFileExist(fileName) {
+//				fmt.Println("File already exists")
+//				continue
+//			}
+//			f, err := os.OpenFile("./" + myServer.name + "/"+fileName, os.O_WRONLY|os.O_CREATE, 0666)
+//			if err != nil {
+//				fmt.Println(err)
+//				return
+//			}
+//			io.Copy(f, tmpFile)
+//			f.Close()
+//		}
 	}
 }
 
@@ -487,8 +496,8 @@ func clientRequestFile(fileName string, addr string) {
 	fmt.Println("Connected to server ....")
 
 	// Dircetory -- where file saved
-	directory := "./test/"
-
+	// directory := "./test/"
+	directory := Directory
 	// send action
 	conn.Write([]byte("get\n"))
 	// send request file name
@@ -518,8 +527,7 @@ func clientRequestFile(fileName string, addr string) {
 	fmt.Printf("Finished transferring file. Received: %d \n", receivedBytes)
 }
 
-func clientSendFile(sf multipart.File, fileName string, addr string) {
-
+func clientSendFile(fileName string, addr string) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
@@ -541,7 +549,13 @@ func clientSendFile(sf multipart.File, fileName string, addr string) {
 	}
 
 	var n int64
-	n, err = io.Copy(conn, sf)
+	file, err := os.Open(strings.TrimSpace(Directory + fileName))
+	if err != nil {
+		fmt.Println("[clientSendFile] Not able to open file")
+	    log.Fatal(err)
+	}
+	defer file.Close()
+	n, err = io.Copy(conn, file)
 	conn.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -600,7 +614,7 @@ func handleConnection(conn net.Conn) {
 
 func serverRecvUploadFile(conn net.Conn, reader *bufio.Reader) {
 	// Dirctory
-	directory := "./test/"
+	directory := Directory
 
 	fileName, _ := reader.ReadString('\n')
 	fileName = strings.Trim(fileName, "\n")
@@ -633,7 +647,7 @@ func serverRecvUploadFile(conn net.Conn, reader *bufio.Reader) {
 }
 
 func serverSendFile(conn net.Conn, reader *bufio.Reader) {
-	directory := "./test/"
+	directory := Directory
 	fileName, _ := reader.ReadString('\n')
 	fileName = strings.Trim(fileName, "\n")
 	fmt.Println("fileName: ", fileName)
@@ -669,6 +683,9 @@ func main() {
 	myServer = servers[i]
 	master = masterServer[myServer.cluster]
 
+	// Directory = "./" + myServer.name + "/"
+	Directory = "./test/"
+	
 	readGroupConfig()
 	readMusicConfig()
 
