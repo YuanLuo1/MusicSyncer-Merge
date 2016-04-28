@@ -146,11 +146,12 @@ func redirectToCorrectServer(groupName string, w http.ResponseWriter, r *http.Re
 	serverList := clusterMap[groupMap[groupName]]
 	fmt.Println(serverList)
 	for i:= range serverList {
-		_, err := rpc.Dial("tcp", serverList[i].combineAddr("comm"))
+		conn, err := rpc.Dial("tcp", serverList[i].combineAddr("comm"))
 		if err != nil {
 			continue
 		} else {
 			fmt.Println("[Debug]redirect", serverList[i].combineAddr("http")+"/join.html?"+groupName)
+			conn.Close()
 			http.Redirect(w, r, "http://"+serverList[i].combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
 			return
 		}
