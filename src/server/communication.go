@@ -12,6 +12,7 @@ func sendOneMsg(dest string, src string, kind string, data string) {
     conn, err := net.Dial("tcp", msg.Dest)
     if err != nil {
         fmt.Println("Connection error: ", err)
+        return
     }
     encoder := gob.NewEncoder(conn)
     encoder.Encode(msg)

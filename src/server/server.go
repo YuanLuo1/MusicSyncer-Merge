@@ -405,6 +405,13 @@ func rmDeadServer(memToRemove Server) {
 			break
 		}
 	}
+	
+	for i:= range servers {
+		if servers[i] == memToRemove {
+			servers = append(servers[:i], servers[i+1:]...)
+			break
+		}
+	}
 	mapLock.Unlock()
 }
 
