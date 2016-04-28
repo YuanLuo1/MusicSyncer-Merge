@@ -15,6 +15,7 @@ import (
 	"time"
 	"sync"
 	"bufio"
+	"net/rpc"
 )
 
 var (
@@ -89,7 +90,7 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		if !isGroupNameExist(groupName) {
 
 			createNewGroupLocal(groupName, myServer.cluster) //local
-			
+			multicastServers(groupName, "create_group")
 			// Send a request to every server to request create new server
 			if myServer == master {
 				fmt.Println("I'm a master and multicasting a  update to every slave")
@@ -144,8 +145,17 @@ func redirectToCorrectServer(groupName string, w http.ResponseWriter, r *http.Re
 	fmt.Println(groupMap[groupName])
 	serverList := clusterMap[groupMap[groupName]]
 	fmt.Println(serverList)
-	fmt.Println("[Debug]redirect", serverList[0].combineAddr("http")+"/join.html?"+groupName)
-	http.Redirect(w, r, "http://"+serverList[0].combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
+	for i:= range serverList {
+		_, err := rpc.Dial("tcp", serverList[i].combineAddr("comm"))
+		if err != nil {
+			continue
+		} else {
+			fmt.Println("[Debug]redirect", serverList[i].combineAddr("http")+"/join.html?"+groupName)
+			http.Redirect(w, r, "http://"+serverList[i].combineAddr("http")+"/join.html?"+groupName, http.StatusFound)
+			return
+		}
+	}
+	fmt.Fprintf(w, "One of clusters all fail, cannot do redirect")
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
@@ -322,9 +332,6 @@ func startHTTP() {
 	http.HandleFunc("/join.html", joinHandler)
 	http.HandleFunc("/upload.html", fileHandler)
 	
-	//http.HandleFunc("/upload.html/", groupHandler)
-	//http.HandleFunc("/leave", leaveHandler)
-
 	http.ListenAndServe(":"+myServer.http_port, nil)
 
 }
@@ -391,13 +398,10 @@ func getDeadServer() {
 func rmDeadServer(memToRemove Server) {
 	mapLock.Lock()
 	list := clusterMap[memToRemove.cluster]
-	// fmt.Println("[Debug111]",list)
 	for i := range list {
 		if list[i] == memToRemove {
 			list = append(list[:i], list[i+1:]...)
 			clusterMap[memToRemove.cluster] = list
-			// fmt.Println("[Debug222]",list)
-			// fmt.Println("[Debug333]",clusterMap)
 			break
 		}
 	}
@@ -564,7 +568,6 @@ func clientSendFile(fileName string, addr string) {
 }
 
 /* File Transfer port Listener */
-
 func FileListener() {
 
 	fmt.Println("Launching File Listener Port")
@@ -584,14 +587,6 @@ func FileListener() {
 		go handleConnection(conn)
 	}
 }
-
-/*func checkFileExist(fileName string) bool{
-    fileName = "./test/" + fileName
-    if _, err := os.Stat(fileName); err == nil{
-        return true
-    }
-    return false
-}*/
 
 func handleConnection(conn net.Conn) {
 	fmt.Println("Start handling connection")
@@ -677,7 +672,7 @@ func main() {
 	readServerConfig()
 
 	//select server's configuration
-	fmt.Print("[init] Enter a number(0-3) set up this server: ")
+	fmt.Print("[init] Enter a number(0-5) set up this server: ")
 	var i int
 	fmt.Scan(&i)
 	myServer = servers[i]
@@ -690,7 +685,6 @@ func main() {
     	fmt.Println(err)
  	}
 
-	// Directory = "./" + myServer.name + "/"
 	Directory = "./test/"
 	
 	readGroupConfig()

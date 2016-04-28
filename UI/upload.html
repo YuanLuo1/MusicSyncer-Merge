@@ -141,7 +141,6 @@ $(function() {
       <div class=" single-grid">
 
         <div class="music-player">
-          <!--<div style="background-image: url(http://i.imgur.com/yqB0erk.jpg);" class="album"></div>-->
 
           <div class="info">
             <div class="left">
@@ -229,13 +228,11 @@ $(function() {
 
     <div class="col-md-3 categories-grid">
       <div class="grid-categories">
-        <h4>{{.GroupName}}</h4>
+        <h4>Group: {{.GroupName}}</h4>
         <ul class="popular" style="position:absolute; height:270px; width:100%; overflow:auto">
           {{range $key, $value := .FilesMap}}
-          <li> <a href="#"><i class="glyphicon glyphicon-ok"></i>{{$key}}</a> </li>
+          <li> <a href="javascript:;"><i class="glyphicon glyphicon-ok"></i>{{$key}}</a> </li>
           {{end}}
-          <!--<li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music D</a></li>
-          <li><a href="#"><i class="glyphicon glyphicon-ok"> </i>Music E</a></li>-->
         </ul>
       </div>
     </div>
